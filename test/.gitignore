@@ -1,0 +1,12 @@
+node_modules/
+wallet-db/
+artifacts/
+*.log
+engine-db/*
+engine.db
+
+# Patches should be committed to version control
+!patches/
+!patches/**/*.patch
+
+.env
