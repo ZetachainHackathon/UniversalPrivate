@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/leveldown": "^4.0.3",
     "@types/node": "^18.11.18",
-    "patch-package": "^8.0.1"
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0"
   }
 }
