@@ -1,14 +1,38 @@
 #!/usr/bin/env node
 
 /**
- * Script to manually apply ZetachainTestnet support to nested shared-models dependency
- * This handles the case where @railgun-community/wallet has its own shared-models@7.5.0
+ * Script to copy patched shared-models files to nested dependency
+ * This copies the already-patched files from top-level shared-models to wallet's nested shared-models
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const nestedPath = path.join(
+// Source: top-level shared-models (already patched)
+const sourceJsPath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  '@railgun-community',
+  'shared-models',
+  'dist',
+  'models',
+  'network-config.js'
+);
+
+const sourceDtsPath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  '@railgun-community',
+  'shared-models',
+  'dist',
+  'models',
+  'network-config.d.ts'
+);
+
+// Target: wallet's nested shared-models
+const targetJsPath = path.join(
   __dirname,
   '..',
   'node_modules',
@@ -22,48 +46,64 @@ const nestedPath = path.join(
   'network-config.js'
 );
 
-const nestedDtsPath = nestedPath.replace('.js', '.d.ts');
+const targetDtsPath = path.join(
+  __dirname,
+  '..',
+  'node_modules',
+  '@railgun-community',
+  'wallet',
+  'node_modules',
+  '@railgun-community',
+  'shared-models',
+  'dist',
+  'models',
+  'network-config.d.ts'
+);
 
-function checkAndApplyPatch(filePath, isDts = false) {
-  if (!fs.existsSync(filePath)) {
-    console.log(`⚠️  File not found: ${filePath}`);
+function copyFile(sourcePath, targetPath, fileName) {
+  // Check if source exists
+  if (!fs.existsSync(sourcePath)) {
+    console.log(`⚠️  Source file not found: ${sourcePath}`);
     return false;
   }
 
-  let content = fs.readFileSync(filePath, 'utf8');
-  
-  // Check if ZetachainTestnet already exists
-  if (content.includes('ZetachainTestnet')) {
-    console.log(`✅ ZetachainTestnet already exists in ${path.basename(filePath)}`);
+  // Check if target directory exists
+  const targetDir = path.dirname(targetPath);
+  if (!fs.existsSync(targetDir)) {
+    console.log(`⚠️  Target directory not found: ${targetDir}`);
+    return false;
+  }
+
+  // Check if target already has ZetachainTestnet
+  if (fs.existsSync(targetPath)) {
+    const targetContent = fs.readFileSync(targetPath, 'utf8');
+    if (targetContent.includes('ZetachainTestnet')) {
+      console.log(`✅ ${fileName} already contains ZetachainTestnet, skipping copy`);
+      return true;
+    }
+  }
+
+  // Copy file
+  try {
+    fs.copyFileSync(sourcePath, targetPath);
+    console.log(`✅ Copied ${fileName} to nested dependency`);
     return true;
-  }
-
-  // Apply patch for .d.ts file
-  if (isDts) {
-    content = content.replace(
-      /PolygonMumbai_DEPRECATED = "Polygon_Mumbai"\n}/,
-      'PolygonMumbai_DEPRECATED = "Polygon_Mumbai",\n    ZetachainTestnet = "Zetachain_Testnet"\n}'
-    );
-  } else {
-    // Apply patch for .js file - this is more complex, so we'll just log
-    console.log(`⚠️  Manual patch needed for ${path.basename(filePath)}`);
-    console.log(`   Please ensure ZetachainTestnet is added to the nested dependency`);
+  } catch (error) {
+    console.error(`❌ Failed to copy ${fileName}:`, error.message);
     return false;
   }
-
-  fs.writeFileSync(filePath, content, 'utf8');
-  console.log(`✅ Applied patch to ${path.basename(filePath)}`);
-  return true;
 }
 
-console.log('Checking nested shared-models dependency...');
+console.log('Copying patched shared-models files to nested dependency...');
 
-const dtsPatched = checkAndApplyPatch(nestedDtsPath, true);
-const jsPatched = checkAndApplyPatch(nestedPath, false);
+const jsCopied = copyFile(sourceJsPath, targetJsPath, 'network-config.js');
+const dtsCopied = copyFile(sourceDtsPath, targetDtsPath, 'network-config.d.ts');
 
-if (dtsPatched || jsPatched) {
-  console.log('✅ Nested dependency patch applied');
+if (jsCopied && dtsCopied) {
+  console.log('✅ Nested dependency files updated successfully');
+} else if (jsCopied || dtsCopied) {
+  console.log('⚠️  Partially updated nested dependency files');
 } else {
-  console.log('ℹ️  Nested dependency already patched or not found');
+  console.log('ℹ️  Nested dependency files already up to date or not found');
 }
 

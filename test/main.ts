@@ -145,11 +145,11 @@ const main = async () => {
   try {
     // Initialize RAILGUN Engine
     await initializeEngine();
-    console.log("✅ RAILGUN Engine initialized");
+    console.log("RAILGUN Engine initialized");
 
     // Load Network
     await loadEngineProvider();
-    console.log("✅ Network loaded");
+    console.log("Network loaded");
 
 
     // Define Chain (Zetachain)
@@ -171,8 +171,8 @@ const main = async () => {
       undefined, // creationBlockNumbers
     );
     console.log("Wallet created:");
-    console.log("   Wallet ID:", walletInfo.id);
-    console.log("   Railgun Address:", walletInfo.railgunAddress);
+    console.log("Wallet ID:", walletInfo.id);
+    console.log("Railgun Address:", walletInfo.railgunAddress);
 
     const { provider, wallet } = getProviderWallet();
     console.log("Public Wallet Address:", wallet.address);
