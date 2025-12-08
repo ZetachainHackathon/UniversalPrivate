@@ -63,14 +63,14 @@ const targetDtsPath = path.join(
 function copyFile(sourcePath, targetPath, fileName) {
   // Check if source exists
   if (!fs.existsSync(sourcePath)) {
-    console.log(`⚠️  Source file not found: ${sourcePath}`);
+    console.log(`Source file not found: ${sourcePath}`);
     return false;
   }
 
   // Check if target directory exists
   const targetDir = path.dirname(targetPath);
   if (!fs.existsSync(targetDir)) {
-    console.log(`⚠️  Target directory not found: ${targetDir}`);
+    console.log(`Target directory not found: ${targetDir}`);
     return false;
   }
 
@@ -78,7 +78,7 @@ function copyFile(sourcePath, targetPath, fileName) {
   if (fs.existsSync(targetPath)) {
     const targetContent = fs.readFileSync(targetPath, 'utf8');
     if (targetContent.includes('ZetachainTestnet')) {
-      console.log(`✅ ${fileName} already contains ZetachainTestnet, skipping copy`);
+      console.log(`${fileName} already contains ZetachainTestnet, skipping copy`);
       return true;
     }
   }
@@ -86,10 +86,10 @@ function copyFile(sourcePath, targetPath, fileName) {
   // Copy file
   try {
     fs.copyFileSync(sourcePath, targetPath);
-    console.log(`✅ Copied ${fileName} to nested dependency`);
+    console.log(`Copied ${fileName} to nested dependency`);
     return true;
   } catch (error) {
-    console.error(`❌ Failed to copy ${fileName}:`, error.message);
+    console.error(`Failed to copy ${fileName}:`, error.message);
     return false;
   }
 }
@@ -100,10 +100,10 @@ const jsCopied = copyFile(sourceJsPath, targetJsPath, 'network-config.js');
 const dtsCopied = copyFile(sourceDtsPath, targetDtsPath, 'network-config.d.ts');
 
 if (jsCopied && dtsCopied) {
-  console.log('✅ Nested dependency files updated successfully');
+  console.log('Nested dependency files updated successfully');
 } else if (jsCopied || dtsCopied) {
-  console.log('⚠️  Partially updated nested dependency files');
+  console.log('Partially updated nested dependency files');
 } else {
-  console.log('ℹ️  Nested dependency files already up to date or not found');
+  console.log('Nested dependency files already up to date or not found');
 }
 
