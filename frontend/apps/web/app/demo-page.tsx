@@ -1,5 +1,5 @@
-import { Button } from "@repo/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/card";
 
 export default function Home() {
   return (

@@ -4,14 +4,16 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev --port 3000 --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@railgun-community/engine": "^9.5.1",
     "@repo/ui": "workspace:*",
+    "bech32": "^2.0.0",
     "next": "^16.0.7",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

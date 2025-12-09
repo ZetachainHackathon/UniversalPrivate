@@ -5,7 +5,7 @@ export const APP_NAME = "Universal Private";
 export const APP_DESCRIPTION = "Next.js + Tailwind CSS + shadcn/ui";
 
 // API 端点
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+//export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
 // 路由
 export const ROUTES = {
@@ -20,23 +20,21 @@ export const ROUTES = {
  * Currently set to Zetachain Testnet.
  * @constant {NetworkName}
  */
-export const TEST_NETWORK = NetworkName.ZetachainTestnet;
+export const TEST_NETWORK: NetworkName = NetworkName.ZetachainTestnet;
 
 /**
  * The RPC URL for RAILGUN test environment.
  * This constant retrieves the URL from the RAILGUN_TEST_RPC environment variable.
  * Used for connecting to the test blockchain network for RAILGUN operations.
  */
-export const TEST_RPC_URL =
-  process.env.NEXT_PUBLIC_RAILGUN_TEST_RPC ||
-  "https://zetachain-athens.g.allthatnode.com/archive/evm";
+export const TEST_RPC_URL = "https://zetachain-athens.g.allthatnode.com/archive/evm";
 export const SEPOLIA_RPC_URL = "https://1rpc.io/sepolia";
 /**
  * The address of the wrapped base token for the test network.
  * This constant is derived from the network configuration for the test network.
  * @type {string}
  */
-export const TEST_TOKEN = "0x0000c9ec4042283e8139c74f4c64bcd1e0b9b54f";
+export const TEST_TOKEN = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0";
 
 /**
  * The Ethereum address of a test NFT (Non-Fungible Token) contract.
