@@ -1,28 +1,118 @@
-# Turborepo starter
+# Universal Private Frontend
 
-This Turborepo starter is maintained by the Turborepo core team.
+Next.js monorepo with Tailwind CSS and shadcn/ui configured.
 
-## Using this example
+## 🎉 Setup Complete
 
-Run the following command:
+This monorepo is now fully configured with:
+- ✅ Next.js 16
+- ✅ Tailwind CSS
+- ✅ shadcn/ui components
+- ✅ TypeScript path aliases
+- ✅ Turborepo for build optimization
 
-```sh
-npx create-turbo@latest
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+
+**Important:** Run this first!
+
+```bash
+pnpm install
 ```
 
-## What's inside?
+### 2. Start Development Server
 
-This Turborepo includes the following packages/apps:
+```bash
+pnpm dev
+```
 
-### Apps and Packages
+Web app will be available at: http://localhost:3000
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## 📁 Project Structure
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+```
+frontend/
+├── apps/
+│   └── web/                    # Next.js application
+│       ├── app/
+│       │   ├── globals.css     # ✅ Tailwind + shadcn/ui styles
+│       │   └── page.tsx
+│       ├── tailwind.config.ts  # ✅ Tailwind configuration
+│       └── postcss.config.js   # ✅ PostCSS configuration
+│
+└── packages/
+    ├── ui/                     # Shared component library
+    │   ├── src/
+    │   │   ├── button.tsx      # ✅ shadcn/ui Button
+    │   │   ├── card.tsx        # ✅ shadcn/ui Card
+    │   │   ├── globals.css     # ✅ shadcn/ui styles
+    │   │   └── lib/
+    │   │       └── utils.ts    # ✅ cn() utility
+    │   ├── components.json     # ✅ shadcn/ui config
+    │   └── tailwind.config.ts
+    ├── eslint-config/
+    └── typescript-config/
+```
+
+## 🎨 Using Components
+
+Import and use shadcn/ui components in your app:
+
+```tsx
+import { Button } from "@repo/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+
+export default function Page() {
+  return (
+    <div className="p-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Welcome</CardTitle>
+          <CardDescription>Your app is ready</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button>Click me</Button>
+          <Button variant="outline" className="ml-2">Secondary</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+```
+
+## 📦 Adding More shadcn/ui Components
+
+```bash
+cd packages/ui
+npx shadcn@latest add dialog
+npx shadcn@latest add input
+npx shadcn@latest add dropdown-menu
+```
+
+Then add the new component to `packages/ui/package.json` exports:
+
+```json
+"exports": {
+  "./button": "./src/button.tsx",
+  "./dialog": "./src/dialog.tsx",  // Add this
+  "./input": "./src/input.tsx"     // Add this
+}
+```
+
+## 🎨 Customizing Theme
+
+Edit CSS variables in `apps/web/app/globals.css`:
+
+```css
+:root {
+  --primary: 222.2 47.4% 11.2%;
+  --secondary: 210 40% 96.1%;
+  /* More colors... */
+}
+```
+
+## 🛠️ Available Scripts
 
 ### Utilities
 
@@ -125,8 +215,12 @@ pnpm exec turbo link
 
 ## Useful Links
 
-Learn more about the power of Turborepo:
+### Frontend Stack
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [shadcn/ui Documentation](https://ui.shadcn.com)
 
+### Turborepo
 - [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
 - [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
 - [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
