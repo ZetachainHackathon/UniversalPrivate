@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { parseUnits, isAddress, formatEther, ZeroAddress } from "ethers"; 
 import { executeCrossChainShield } from "@/lib/railgun/cross-chain-shield";
 import { loadPrivateWallet } from "@/lib/railgun/wallet-actions";
+import { triggerBalanceRefresh } from "@/lib/railgun/balance";
 import { useWallet } from "@/components/providers/wallet-provider";
+import { useRailgun } from "@/components/providers/railgun-provider";
 import { Button } from "@repo/ui/components/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
@@ -18,10 +21,12 @@ const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
 export default function CrossChainPage() {
   // 從 Context 取得 signer 和 address
   const { isConnected, signer, address, checkNetwork, connectWallet, switchNetwork } = useWallet();
+  const { balances, scanProgress } = useRailgun();
 
   // State
   const [password, setPassword] = useState("");
   const [railgunAddress, setRailgunAddress] = useState("");
+  const [walletId, setWalletId] = useState(""); // 新增 walletId state
   const [adaptAddress, setAdaptAddress] = useState(DEFAULT_ADAPT_ADDRESS);
   const [tokenAddress, setTokenAddress] = useState(DEFAULT_TOKEN_ADDRESS);
   const [amount, setAmount] = useState("0.01");
@@ -31,13 +36,17 @@ export default function CrossChainPage() {
   const [txHash, setTxHash] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [liveBalance, setLiveBalance] = useState("0");
+  // const [privateBalance, setPrivateBalance] = useState("0"); // 移除單一餘額狀態
 
-  // 載入 Railgun 地址 (如果已經登入過)
+  // 監聽 Railgun 餘額變動
   useEffect(() => {
-    // 這裡可以嘗試自動載入，或者要求使用者再次輸入密碼
-    // 為了簡化，我們假設使用者在登入頁面輸入的密碼可以暫存，或者這裡再輸入一次
-    // 這裡先留空，讓使用者手動輸入密碼來解鎖
-  }, []);
+    if (scanProgress < 1.0 && scanProgress > 0) {
+        const newStatus = `🔄 同步中... ${(scanProgress * 100).toFixed(0)}%`;
+        if (status !== newStatus) setStatus(newStatus);
+    } else if (scanProgress === 1.0 && status.startsWith("🔄")) {
+        setStatus("");
+    }
+  }, [scanProgress, status]);
 
   // 監聽餘額
   useEffect(() => {
@@ -58,10 +67,34 @@ export default function CrossChainPage() {
     try {
       const walletInfo = await loadPrivateWallet(password);
       setRailgunAddress(walletInfo.railgunAddress);
+      setWalletId(walletInfo.id);
+      // 觸發餘額掃描
+      await triggerBalanceRefresh(walletInfo.id);
     } catch (e: any) {
       alert("載入失敗: " + e.message);
     }
   };
+
+  // 持續掃描餘額 (每 10 秒，避免重疊)
+  useEffect(() => {
+    if (!walletId) return;
+
+    let isScanning = false;
+    const interval = setInterval(async () => {
+      if (isScanning) return;
+      isScanning = true;
+      try {
+        // console.log("⏰ 定時觸發餘額掃描...");
+        await triggerBalanceRefresh(walletId);
+      } catch (e) {
+        console.error("掃描錯誤:", e);
+      } finally {
+        isScanning = false;
+      }
+    }, 10000); // 加速到 10 秒
+
+    return () => clearInterval(interval);
+  }, [walletId]);
 
   // 複製功能
   const copyToClipboard = (text: string, label: string) => {
@@ -104,6 +137,14 @@ export default function CrossChainPage() {
       await tx.wait();
       setTxHash(tx.hash);
       setStatus("🎉 Shield 成功！");
+
+      // 交易成功後，延遲 5 秒觸發一次掃描
+      if (walletId) {
+        setTimeout(() => {
+            console.log("🔄 交易後觸發餘額更新...");
+            triggerBalanceRefresh(walletId).catch(console.error);
+        }, 5000);
+      }
     } catch (error: any) {
       console.error(error);
       setStatus("❌ 交易失敗: " + (error.reason || error.message));
@@ -122,6 +163,11 @@ export default function CrossChainPage() {
       {/* Header */}
       <header className="w-full p-6 flex justify-between items-center bg-white border-b border-gray-200">
         <div className="flex items-center gap-4">
+          <Link href="/">
+            <Button className="h-10 w-10 p-0 border-2 border-black bg-white text-black hover:bg-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] rounded-lg flex items-center justify-center text-xl font-bold">
+              ←
+            </Button>
+          </Link>
           {railgunAddress ? (
             <div className="flex flex-col">
               <div className="flex items-center gap-2 border-2 border-black px-4 py-2 rounded-xl bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
@@ -218,7 +264,9 @@ export default function CrossChainPage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">ETH</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">
+                    {tokenAddress === ZeroAddress ? "ETH" : "ERC20"}
+                  </span>
                 </div>
                 <p className="text-sm text-gray-500 text-right">錢包餘額: {Number(liveBalance).toFixed(4)} ETH</p>
               </div>
@@ -266,7 +314,27 @@ export default function CrossChainPage() {
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">ETH</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">
+                        {tokenAddress === ZeroAddress ? "ETH" : "ERC20"}
+                    </span>
+                  </div>
+                  
+                  <div className="text-right mt-2">
+                    <p className="text-sm text-gray-500 font-bold">隱私餘額 (Private):</p>
+                    {balances?.erc20Amounts.map((token) => {
+                        const isEth = token.tokenAddress.toLowerCase() === ZeroAddress.toLowerCase();
+                        const symbol = isEth ? "ETH" : `Token (${token.tokenAddress.slice(0,6)}...)`;
+                        // 只顯示大於 0 的餘額
+                        if (token.amount === 0n) return null;
+                        return (
+                        <p key={token.tokenAddress} className="text-sm text-gray-500">
+                            {Number(formatEther(token.amount)).toFixed(4)} {symbol}
+                        </p>
+                        );
+                    })}
+                    {(!balances || balances.erc20Amounts.length === 0) && (
+                        <p className="text-sm text-gray-500">0.0000 (No Balance)</p>
+                    )}
                   </div>
                 </div>
 

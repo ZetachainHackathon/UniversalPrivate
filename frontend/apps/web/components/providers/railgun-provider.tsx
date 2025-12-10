@@ -48,8 +48,8 @@ export default function RailgunProvider({
 
         // 2. 設定監聽器
         BalanceModule.setupBalanceListeners(
-          (progress) => console.log("Scan:", progress), // 這裡可以接回你的 state
-          (balanceEvent) => console.log("Balance:", balanceEvent)
+          (progress) => setScanProgress(progress),
+          (balanceEvent) => setBalances(balanceEvent)
         );
 
         // 3. 連接網路
@@ -75,8 +75,8 @@ export default function RailgunProvider({
   return (
     <RailgunContext.Provider value={{ 
       isReady, 
-      scanProgress: 0, // 暫時寫 0，你需要用 useState 接回來
-      balances: null, 
+      scanProgress,
+      balances, 
       refresh: handleRefresh 
     }}>
       {children}
