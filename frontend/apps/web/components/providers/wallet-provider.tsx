@@ -10,6 +10,7 @@ interface WalletContextType {
   balance: string; // ETH balance
   connectWallet: () => Promise<void>;
   checkNetwork: (chainId: bigint) => Promise<boolean>;
+  switchNetwork: (chainIdHex: string) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType>({} as WalletContextType);
@@ -49,6 +50,23 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
     return network.chainId === targetChainId;
   };
 
+  // 👇 新增：切換網路函式
+  const switchNetwork = async (chainIdHex: string) => {
+    if (!(window as any).ethereum) return;
+    try {
+      await (window as any).ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: chainIdHex }],
+      });
+      // 切換後重新整理頁面以更新狀態
+      window.location.reload();
+    } catch (error: any) {
+      // 錯誤代碼 4902 代表錢包裡還沒新增這條鏈 (通常 Sepolia 預設都有，這裡先簡化處理)
+      console.error("切換網路失敗:", error);
+      alert("無法切換網路，請手動在 MetaMask 選擇 Sepolia");
+    }
+  };
+
   // 監聽帳號切換
   useEffect(() => {
     if ((window as any).ethereum) {
@@ -62,7 +80,15 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <WalletContext.Provider value={{ isConnected, address, signer, balance, connectWallet, checkNetwork }}>
+    <WalletContext.Provider value={{ 
+      isConnected, 
+      address, 
+      signer, 
+      balance, 
+      connectWallet, 
+      checkNetwork,
+      switchNetwork // 👈 記得導出
+    }}>
       {children}
     </WalletContext.Provider>
   );

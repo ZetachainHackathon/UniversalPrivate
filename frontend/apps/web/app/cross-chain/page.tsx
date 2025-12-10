@@ -1,19 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { parseUnits, isAddress } from "ethers";
+import { useEffect, useState } from "react";
+// 👇 1. 記得引入 formatEther
+import { parseUnits, isAddress, formatEther } from "ethers"; 
 import { executeCrossChainShield } from "@/lib/railgun/cross-chain-shield";
 import { loadPrivateWallet } from "@/lib/railgun/wallet-actions";
-// 👇 1. Import the hook
 import { useWallet } from "@/components/providers/wallet-provider";
 
-// Default values (for testing)
-const DEFAULT_ADAPT_ADDRESS = "0xc8B2bc79c5f59F6589a20de8CA1b0aF0b00dF8FF"; // Sepolia EVMAdapt
-const DEFAULT_TOKEN_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // Sepolia ERC20
+// 預設值 (Sepolia)
+const DEFAULT_ADAPT_ADDRESS = "0xc8B2bc79c5f59F6589a20de8CA1b0aF0b00dF8FF"; 
+const DEFAULT_TOKEN_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; 
+
+const SEPOLIA_CHAIN_ID_DEC = 11155111n;
+const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
 
 export default function CrossChainPage() {
-  // 👇 2. Destructure what we need from the wallet context
-  const { isConnected, signer, address, balance, checkNetwork, connectWallet } = useWallet();
+  // 從 Context 取得 signer 和 address
+  const { isConnected, signer, address, checkNetwork, connectWallet, switchNetwork } = useWallet();
 
   const [password, setPassword] = useState("");
   const [adaptAddress, setAdaptAddress] = useState(DEFAULT_ADAPT_ADDRESS);
@@ -24,70 +27,98 @@ export default function CrossChainPage() {
   const [txHash, setTxHash] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Optional: Auto-check connection status on mount
+  // 👇 2. 新增一個本地 State 來存最新的餘額
+  const [liveBalance, setLiveBalance] = useState("0");
+
+  // 👇 3. 新增這個 useEffect: 當 signer 或 address 改變時，強制重抓餘額
+  useEffect(() => {
+    const refreshBalance = async () => {
+      if (signer && address) {
+        try {
+          // 直接問區塊鏈當前的餘額
+          const bal = await signer.provider?.getBalance(address);
+          if (bal) {
+            setLiveBalance(formatEther(bal));
+          }
+        } catch (e) {
+          console.error("無法讀取餘額:", e);
+        }
+      }
+    };
+
+    if (isConnected) {
+      refreshBalance();
+    }
+  }, [signer, address, isConnected]); // 依賴項目
+
+  // 自動檢查連接狀態
   useEffect(() => {
     if (!isConnected) {
-      setStatus("⚠️ Please connect MetaMask first");
+      setStatus("⚠️ 請先連接 MetaMask");
     } else {
-      setStatus(""); // Clear warning if connected
+      setStatus("");
     }
   }, [isConnected]);
 
   const handleShield = async () => {
-    // 1. Basic Validation
-    if (!password) return alert("Please enter your password to load your Railgun address.");
-    if (!isAddress(adaptAddress) || !isAddress(tokenAddress)) return alert("Invalid contract address format.");
+    if (!password) return alert("請輸入密碼以讀取您的 0zk 地址");
+    if (!isAddress(adaptAddress) || !isAddress(tokenAddress)) return alert("合約地址格式錯誤");
 
-    // 2. Wallet Connection Check
     if (!isConnected || !signer) {
       try {
-        await connectWallet(); // Try to connect if not connected
-        return; // Stop here and let the user click again after connecting
+        await connectWallet(); 
+        return; 
       } catch (e) {
-        return alert("Failed to connect wallet.");
+        return alert("連接錢包失敗");
       }
     }
 
-    // 3. Network Check (Sepolia ID: 11155111)
-    const isSepolia = await checkNetwork(11155111n);
+    // 檢查網路 (Sepolia ID: 11155111)
+    const isSepolia = await checkNetwork(SEPOLIA_CHAIN_ID_DEC);
     if (!isSepolia) {
-      return alert("Please switch MetaMask to Sepolia Testnet!");
+      const confirmSwitch = confirm("您目前不在 Sepolia 網路。是否切換網路以進行跨鏈操作？");
+      if (confirmSwitch) {
+        await switchNetwork(SEPOLIA_CHAIN_ID_HEX);
+      }
+      return; // 切換會重整頁面，所以這裡直接 return
     }
 
     setIsLoading(true);
-    setStatus("⏳ Preparing transaction...");
+    setStatus("⏳ 正在準備交易...");
     setTxHash("");
 
     try {
-      // 4. Load Railgun Wallet (to get 0zk destination)
-      setStatus("🔐 Loading Railgun private address...");
+      setStatus("🔐 正在讀取 Railgun 隱私地址...");
       const walletInfo = await loadPrivateWallet(password);
       const my0zkAddress = walletInfo.railgunAddress;
       console.log("Recipient 0zk:", my0zkAddress);
 
-      // 5. Execute Shield
-      setStatus("⏳ Executing Cross-Chain Shield (Please sign in MetaMask)...");
+      setStatus("⏳ 正在執行跨鏈 Shield (請在 MetaMask 簽署)...");
       
-      const amountBigInt = parseUnits(amount, 18); // Assuming 18 decimals
+      const amountBigInt = parseUnits(amount, 18); 
 
-      // 👇 Use the signer from our context!
       const tx = await executeCrossChainShield(
         my0zkAddress,
         adaptAddress,
         tokenAddress,
         amountBigInt,
-        signer, 
+        signer,
+        true // 👈 強制使用 Native Token (ETH) 支付，即使 tokenAddress 是 ZRC20
       );
 
-      setStatus("✅ Transaction sent! Waiting for confirmation...");
+      setStatus("✅ 交易已送出！等待上鏈...");
       await tx.wait();
       
       setTxHash(tx.hash);
-      setStatus("🎉 Cross-Chain Shield Successful! Assets will arrive on ZetaChain shortly.");
+      setStatus("🎉 跨鏈 Shield 成功！資產即將跨鏈至 ZetaChain。");
+
+      // 交易成功後，順便再更新一次餘額
+      const newBal = await signer.provider?.getBalance(address!);
+      if (newBal) setLiveBalance(formatEther(newBal));
 
     } catch (e: any) {
       console.error(e);
-      setStatus(`❌ Failed: ${e.message || e}`);
+      setStatus(`❌ 失敗: ${e.message || e}`);
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +127,6 @@ export default function CrossChainPage() {
   return (
     <div className="p-8 max-w-2xl mx-auto space-y-6">
       
-      {/* 👇 Header: Wallet Status */}
       <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg border">
         <div>
             <h1 className="text-2xl font-bold text-indigo-600">Cross-Chain Shield</h1>
@@ -108,8 +138,9 @@ export default function CrossChainPage() {
                     <p className="text-sm font-bold text-gray-700">
                         {address?.slice(0, 6)}...{address?.slice(-4)}
                     </p>
+                    {/* 👇 4. 這裡改用 liveBalance 顯示 */}
                     <p className="text-xs text-green-600 font-mono">
-                        {parseFloat(balance).toFixed(4)} ETH
+                        {parseFloat(liveBalance).toFixed(4)} SepoliaETH
                     </p>
                 </>
             ) : (
@@ -124,12 +155,12 @@ export default function CrossChainPage() {
       </div>
       
       <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-800">
-        <p>This deposits tokens from <strong>Sepolia</strong> into your <strong>ZetaChain</strong> private Railgun balance.</p>
-        <p className="mt-1 font-bold">⚠️ Requirements:</p>
+        <p>此功能將從 <strong>Sepolia</strong> 網路存款，並在 <strong>ZetaChain</strong> 上的 Railgun 隱私錢包中接收。</p>
+        <p className="mt-1 font-bold">⚠️ 前置要求：</p>
         <ul className="list-disc list-inside text-xs">
-          <li>MetaMask on Sepolia</li>
-          <li>Sepolia ETH (Gas)</li>
-          <li>ERC20 Tokens to shield</li>
+          <li>MetaMask 必須切換到 Sepolia</li>
+          <li>MetaMask 帳號必須有 Sepolia ETH (Gas)</li>
+          <li>MetaMask 帳號必須有要存入的 ERC20 代幣</li>
         </ul>
       </div>
 
@@ -184,7 +215,6 @@ export default function CrossChainPage() {
           {isLoading ? "Processing..." : "Shield to ZetaChain"}
         </button>
 
-        {/* Status Display */}
         <div className="min-h-[3rem] text-center">
           <p className={`font-bold ${status.includes("Failed") || status.includes("⚠️") || status.includes("❌") ? "text-red-600" : "text-gray-700"}`}>
             {status}
