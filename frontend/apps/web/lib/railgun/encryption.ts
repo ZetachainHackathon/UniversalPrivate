@@ -1,15 +1,4 @@
 import { pbkdf2, getRandomBytes } from "@railgun-community/wallet";
-
-/**
- * 輔助函式：將 Uint8Array 轉為 Hex String
- * 因為 localStorage 只能存字串，且 pbkdf2 也需要字串格式的 salt
- */
-const toHex = (buffer: Uint8Array): string => {
-  return Array.from(buffer)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-};
-
 // ------------------------------------------------------------------
 // 1. 基礎 Hash 服務 (Hash Service)
 // ------------------------------------------------------------------

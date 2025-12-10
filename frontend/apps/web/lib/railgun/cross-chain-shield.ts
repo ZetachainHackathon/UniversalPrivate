@@ -101,9 +101,7 @@ export const executeCrossChainShield = async (
         valueToSend = 0n;
     }
 
-
-    const { wallet: identityWallet } = getProviderWallet();
-    const shieldPrivateKey = await getShieldSignature(identityWallet);
+    const shieldPrivateKey = await getShieldSignature(signer as Wallet);
     const random = ByteUtils.randomHex(16);
 
     const shieldRequests = await generateERC20ShieldRequests(
