@@ -7,6 +7,7 @@
     "./components/button": "./src/components/button.tsx",
     "./components/card": "./src/components/card.tsx",
     "./components/code": "./src/components/code.tsx",
+    "./components/tabs": "./src/components/tabs.tsx",
     "./lib": "./src/lib/index.ts",
     "./lib/cn": "./src/lib/cn.ts",
     "./globals.css": "./src/globals.css"
