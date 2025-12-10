@@ -12,7 +12,8 @@ contract EVMAdapt  {
     
     enum RailgunOperation {
         SHIELD,
-        TRANSACT
+        TRANSACT,
+        UNSHIELD_OUTSIDE_CHAIN
     }
     function _defaultRevertOptions() internal pure returns (RevertOptions memory) {
         return RevertOptions({ 
@@ -36,6 +37,16 @@ contract EVMAdapt  {
         bytes memory message = abi.encode(
             uint256(RailgunOperation.SHIELD),
             abi.encode(_shieldRequests)
+        );
+        gatewayEVM.depositAndCall{value: msg.value}(zetachainAdapt, message, revertOptions);
+    }
+
+    function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable {
+        require(msg.value > 0, "Must send ETH for cross-chain fee");
+        RevertOptions memory revertOptions = _defaultRevertOptions();
+        bytes memory message = abi.encode(
+            uint256(RailgunOperation.UNSHIELD_OUTSIDE_CHAIN),
+            abi.encode(_unshieldOutsideChainData)
         );
         gatewayEVM.depositAndCall{value: msg.value}(zetachainAdapt, message, revertOptions);
     }
