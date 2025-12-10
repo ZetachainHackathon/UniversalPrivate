@@ -15,7 +15,8 @@ import { loadEngineProvider } from "./loadProvider";
 import { TEST_ENCRYPTION_KEY, TEST_TOKEN ,TEST_NETWORK} from "./constants";
 import { getProviderWallet } from "./wallet";
 import { displaySpendableBalances, runBalancePoller, setupBalanceCallbacks, waitForBalancesLoaded } from "./balances";
-  
+import { unshieldOutsideChain } from "./unshield";
+import { setupNodeGroth16 } from "./prover";
 
 /**
  * Initializes the RAILGUN engine with the specified configuration.
@@ -150,7 +151,8 @@ const main = async () => {
     // Load Network
     await loadEngineProvider();
     console.log("Network loaded");
-
+    await setupNodeGroth16();
+    console.log("Groth16 setup");
 
     // Define Chain (Zetachain)
     const chain = NETWORK_CONFIG[TEST_NETWORK].chain;
@@ -180,10 +182,23 @@ const main = async () => {
     const balance = await provider.getBalance(wallet.address);
     console.log("Zeta Balance:", balance.toString());   
 
+    // 1. 首先設置餘額回調
     setupBalanceCallbacks();
+    
+    // 2. 等待餘額載入完成（這會同步 Merkle tree 和載入私有餘額）
+    console.log("Waiting for balances to load...");
     runBalancePoller([walletInfo.id]);
     await waitForBalancesLoaded();
+    
+    // 3. 顯示可用餘額
     displaySpendableBalances();
+    
+    // 4. 確認有足夠餘額後再執行 unshield
+    console.log("Starting unshield outside chain...");
+    await unshieldOutsideChain(TEST_ENCRYPTION_KEY, walletInfo);
+    console.log("Unshield Outside Chain completed");
+
+    
   } catch (err) {
     console.error("Failed to initialize RAILGUN Engine:", err);
     process.exit(1);

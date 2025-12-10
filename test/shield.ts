@@ -125,11 +125,16 @@ const shieldERC20OnZetachain = async (
 };
 
 const main = async () => {
+
+  const EVM_ADAPT_ADDRESS = "0xF6bf8ffd0460f922B98EE2fE8d101Da1781E1E59"; // EVMAdapt address
+  const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH address(ZRC20)
+  const AMOUNT = BigInt("10000000000000000"); // 0.001 ZETACHAIN ETH amount
+
   await shieldERC20OnZetachain(
-    "0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990",
-    "0xc8B2bc79c5f59F6589a20de8CA1b0aF0b00dF8FF",
-    "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
-    BigInt("10000000000000000"),
+    "0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990", // Railgun address
+    EVM_ADAPT_ADDRESS, 
+    ZRC20_ADDRESS, 
+    AMOUNT, 
   );
   console.log("Shield transaction sent");
 };

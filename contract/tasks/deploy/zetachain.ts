@@ -3,6 +3,8 @@ import { task } from 'hardhat/config';
 import { listArtifacts, loadArtifacts } from '../../helpers/logic/artifacts';
 import type { Contract } from 'ethers';
 
+
+
 /**
  * Log data to verify contract
  *
@@ -26,8 +28,10 @@ async function logVerify(
 
 task('deploy:zetachain', 'Creates deployment for ZetaChain')
   .addParam('weth9', 'Address of existing WETH9 wrapped base token contract on ZetaChain')
+  .addParam('zetachaingateway', 'Address of ZetaChain Gateway contract on ZetaChain')
+  .addParam('uniswaprouter', 'Address of Uniswap Router contract on ZetaChain')
   .addOptionalParam('admin', 'Admin address (defaults to deployer)', '')
-  .setAction(async function ({ weth9, admin }: { weth9: string; admin: string }, hre) {
+  .setAction(async function ({ weth9, zetachaingateway, uniswaprouter, admin }: { weth9: string; zetachaingateway: string; uniswaprouter: string; admin: string }, hre) {
     const { ethers } = hre;
     await hre.run('compile');
 
@@ -37,6 +41,8 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     console.log(`\nDeployer: ${deployer.address}`);
     console.log(`Admin: ${adminAddress}`);
     console.log(`WETH9: ${weth9}`);
+    console.log(`ZetaChain Gateway: ${zetachaingateway}`);
+    console.log(`Uniswap Router: ${uniswaprouter}`);
 
     // Get build artifacts
     const PoseidonT3 = await ethers.getContractFactory('PoseidonT3');
@@ -136,8 +142,18 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     // Deploy ZetachainAdapt
     console.log('\n=== Deploying Zetachain Adapt ===');
     const ZetachainAdapt = await ethers.getContractFactory('ZetachainAdapt');
-    const zetachainAdapt = await ZetachainAdapt.deploy(proxy.address);
-    await logVerify('Zetachain Adapt', zetachainAdapt, [proxy.address]);
+    const zetachainAdapt = await ZetachainAdapt.deploy(
+      proxy.address,
+      zetachaingateway,
+      uniswaprouter,
+      relayAdapt.address
+    );
+    await logVerify('Zetachain Adapt', zetachainAdapt, [
+      proxy.address,
+      zetachaingateway,
+      uniswaprouter,
+      relayAdapt.address,
+    ]);
 
     // Output deployment config
     console.log('\n=== DEPLOYMENT COMPLETE ===');
@@ -153,6 +169,8 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
       poseidonT3: poseidonT3.address,
       poseidonT4: poseidonT4.address,
       weth9: weth9,
+      zetachainGateway: zetachaingateway,
+      uniswapRouter: uniswaprouter,
       admin: adminAddress,
     }, null, 2));
 
@@ -160,6 +178,8 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     console.log(`Railgun Proxy (Main Contract): ${proxy.address}`);
     console.log(`Relay Adapt: ${relayAdapt.address}`);
     console.log(`Zetachain Adapt: ${zetachainAdapt.address}`);
+    console.log(`ZetaChain Gateway: ${zetachaingateway}`);
+    console.log(`Uniswap Router: ${uniswaprouter}`);
     console.log(`Treasury: ${treasuryProxy.address}`);
     console.log(`Admin: ${adminAddress}`);
 
@@ -167,15 +187,23 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     if (hre.network.name !== 'hardhat') {
       console.log('\n=== VERIFYING CONTRACTS ON BLOCKSCOUT ===');
 
-      // 1) Railgun implementation (無 constructor args)
+      // 1) Railgun implementation (無 constructor args, but has libraries)
       try {
         await hre.run('verify:verify', {
           address: implementation.address,
           constructorArguments: [],
+          libraries: {
+            PoseidonT3: poseidonT3.address,
+            PoseidonT4: poseidonT4.address,
+          },
         });
         console.log('✓ Verified Railgun Implementation');
       } catch (e) {
         console.warn('Railgun Implementation verify failed:', e);
+        console.warn('Library addresses used:');
+        console.warn(`  PoseidonT3: ${poseidonT3.address}`);
+        console.warn(`  PoseidonT4: ${poseidonT4.address}`);
+        console.warn('You may need to manually verify this contract on Blockscout with these library addresses');
       }
 
       // 2) Treasury implementation
@@ -200,15 +228,25 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
         console.warn('RelayAdapt verify failed:', e);
       }
 
-      // 4) ZetachainAdapt(proxy)
+      // 4) ZetachainAdapt(proxy, zetachainGateway, uniswapRouter, relayAdapt)
+      // Note: ZetachainAdapt uses SwapHelperLib from @zetachain/toolkit
+      // If the library is internal, it's inlined and doesn't need library address
+      // If verification fails, it may be due to Blockscout's handling of external dependencies
       try {
         await hre.run('verify:verify', {
           address: zetachainAdapt.address,
-          constructorArguments: [proxy.address],
+          constructorArguments: [
+            proxy.address,
+            zetachaingateway,
+            uniswaprouter,
+            relayAdapt.address,
+          ],
         });
         console.log('✓ Verified ZetachainAdapt');
       } catch (e) {
         console.warn('ZetachainAdapt verify failed:', e);
+        console.warn('Note: This may be due to Blockscout\'s handling of external library dependencies (SwapHelperLib)');
+        console.warn('You may need to manually verify this contract on Blockscout');
       }
     }
   });

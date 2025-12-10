@@ -5,5 +5,6 @@ import './full';
 import './no_governance';
 import './test';
 import './zetachain';
+import './zetachainAdapt';
 import './evmAdapt';
 

@@ -10,8 +10,14 @@
 
 ### Depoly railgun on Zetachain
 
+refer from https://www.zetachain.com/docs/reference/network/contracts
+
 ```
-npx hardhat deploy:zetachain --network zetachain-testnet --weth9 0x0000c9ec4042283e8139c74f4c64bcd1e0b9b54f  
+npx hardhat deploy:zetachain \
+  --network zetachain-testnet \
+  --weth9 0x0000c9ec4042283e8139c74f4c64bcd1e0b9b54f \
+  --zetachaingateway 0x6c533f7fe93fae114d0954697069df33c9b74fd7\
+  --uniswaprouter 0x2ca7d64A7EFE2D62A725E2B35Cf7230D6677FfEe
 ```
 
 ### Depoly evmAdapt on Sepolia

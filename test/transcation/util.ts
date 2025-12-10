@@ -6,6 +6,10 @@ import {
   type RailgunERC20Amount,
   type RailgunNFTAmount,
   type RailgunNFTAmountRecipient,
+  NetworkName,
+  EVMGasType,
+  TransactionGasDetails,
+  getEVMGasTypeForTransaction,
 } from "@railgun-community/shared-models";
 import {
     ByteUtils,
@@ -14,6 +18,8 @@ import {
 } from "@railgun-community/wallet";
 import { keccak256, type HDNodeWallet, type Wallet } from "ethers";
 import { assertValidRailgunAddress } from "@railgun-community/wallet";
+import { getProviderWallet } from "../wallet";
+import { TEST_NETWORK } from "../constants";
 
 /**
  * Generates a shield private key signature by signing a predefined message with the provided wallet
@@ -138,7 +144,20 @@ export const generateERC20ShieldRequests = async (
     );
   };
 
-
+export const getOriginalGasDetailsForTransaction = async (
+  network: NetworkName,
+  sendWithPublicWallet: boolean
+): Promise<TransactionGasDetails> => {
+  // MOCK HANDLE WALLET MANAGEMENT AND GAS ESTIMATES
+  const { wallet } = getProviderWallet();
+  const gasDetails = await getGasDetailsForTransaction(
+    network,
+    0n,
+    sendWithPublicWallet,
+    wallet
+  );
+  return gasDetails;
+};
 /**
  * Retrieves gas details for a transaction based on network and wallet information.
  *
@@ -162,7 +181,7 @@ export const generateERC20ShieldRequests = async (
  *   false,
  *   myWallet
  * );
- 
+*/
 export const getGasDetailsForTransaction = async (
     network: NetworkName,
     gasEstimate: bigint,
@@ -229,4 +248,4 @@ export const getGasDetailsForTransaction = async (
   process.on("unhandledRejection", async (reason, promise) => {
     console.log("Unhandled rejection", reason, promise);
   });
-*/
+
