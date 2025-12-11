@@ -33,10 +33,6 @@ import { overrideArtifact } from "@railgun-community/wallet";
 import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
 
 const setupZetachainOverrides = () => {
-  // Override Relay Adapt Contract
-  const ZETACHAIN_ADAPT_ADDRESS = "0xa69D6437F95C116eF70BCaf3696b186DFF6aCD49";
-  NETWORK_CONFIG[NetworkName.ZetachainTestnet].relayAdaptContract = ZETACHAIN_ADAPT_ADDRESS;
-
   // Override Artifacts
   const artifacts = listArtifacts();
   for (const artifactConfig of artifacts) {
