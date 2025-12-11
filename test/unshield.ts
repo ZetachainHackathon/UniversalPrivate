@@ -27,7 +27,7 @@ import {
 } from "./transcation/util";
 import { TEST_ENCRYPTION_KEY, TEST_NETWORK } from "./constants";
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
-import { Contract, type ContractTransaction } from "ethers";
+import { Contract, ethers, type ContractTransaction } from "ethers";
 import { TokenData } from "@railgun-community/engine";
 import { overrideArtifact } from "@railgun-community/wallet";
 import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
@@ -176,8 +176,8 @@ export const generateUnshieldOutsideChainData = async (
   const TEST_AMOUNT = 9975000000000000n; // 0.001 ZETACHAIN ETH
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH to test
   const TARGET_ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // 目標鏈的ZRC20地址(決定要轉到哪條鏈) BASE
-  const ZETACHAIN_ADAPT_ADDRESS = "0xa69D6437F95C116eF70BCaf3696b186DFF6aCD49"; // ZetachainAdapt address
-  const RECEIVER = "0xc54358218ee96a250bc3f89e5592198003609bd6"; // Receiver address
+  const ZETACHAIN_ADAPT_ADDRESS = "0xAd2EE52557851323731C5980596478319DF8035E"; // ZetachainAdapt address
+  const RECEIVER = ethers.getBytes(ethers.getAddress("0xc54358218ee96a250bc3f89e5592198003609bd6")); // Receiver address 20 bytes
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"; // Zero address
   // 降低 gas limit 以減少 gas fee
   const GAS_LIMIT = 500000n; 
@@ -345,7 +345,7 @@ export const unshieldOutsideChain = async (
 ) => {
   
   const sepoliaWallet = getSepoliaWallet();
-  const EVM_ADAPT_ADDRESS = "0xF6bf8ffd0460f922B98EE2fE8d101Da1781E1E59"; // Sepolia EVMAdapt address
+  const EVM_ADAPT_ADDRESS = "0xbC3Da3B1890ED501F0d357b12BB834810c34d71E"; // Sepolia EVMAdapt address
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [

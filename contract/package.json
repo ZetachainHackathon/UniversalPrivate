@@ -12,7 +12,8 @@
     "deploy": "hardhat deploy:test --network localhost",
     "test": "hardhat test --skip-long-tests",
     "test:complete": "hardhat test",
-    "analyze": "npm run clean; hardhat compile; npm run lint; ./slither.sh"
+    "analyze": "npm run clean; hardhat compile; npm run lint; ./slither.sh",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.7.0",
@@ -61,7 +62,8 @@
     "@openzeppelin/contracts": "^4.8.1",
     "@openzeppelin/contracts-upgradeable": "^4.8.1",
     "@zetachain/protocol-contracts": "^14.1.0",
-    "@zetachain/toolkit": "^16.3.0"
+    "@zetachain/toolkit": "^16.3.0",
+    "patch-package": "^8.0.1"
   },
   "packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
 }

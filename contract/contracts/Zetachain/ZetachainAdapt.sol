@@ -9,8 +9,6 @@ import { RevertOptions } from "@zetachain/protocol-contracts/contracts/Revert.so
 import { IGatewayZEVM } from "@zetachain/protocol-contracts/contracts/zevm/interfaces/IGatewayZEVM.sol";
 import { IZRC20 } from "@zetachain/protocol-contracts/contracts/zevm/interfaces/IZRC20.sol";
 
-event Withdraw(uint256 amount, address indexed zrc20, address indexed targetZrc20);
-event Shield(uint256 amount, address indexed zrc20);
 
 interface IRailgunSmartWallet {
   function shield(ShieldRequest[] calldata _shieldRequests) external;
@@ -76,7 +74,7 @@ contract ZetachainAdapt is UniversalContract {
     } else {
       revert("ZetachainAdapt: Invalid operation");
     }
-    emit Shield(amount, zrc20);
+
   }
 
   function withdraw(bytes memory receiver, uint256 amount, address zrc20,address targetZrc20,uint256 gasLimit,RevertOptions calldata revertOptions) external  {
@@ -84,54 +82,65 @@ contract ZetachainAdapt is UniversalContract {
     // refer from https://github.com/zeta-chain/standard-contracts/blob/main/contracts/messaging/contracts/UniversalRouter.sol
     (address gasZRC20, uint256 gasFee) = IZRC20(targetZrc20).withdrawGasFeeWithGasLimit(gasLimit);
 
+    uint256 swapAmount = amount;
     
+
     if (gasZRC20 != targetZrc20) {
-      uint256 spent = SwapHelperLib.swapTokensForExactTokens(
+        uint256 inputForGas = SwapHelperLib.swapTokensForExactTokens(
             uniswapRouter,
             zrc20,
             gasFee,
             gasZRC20,
             amount
         );
-      require(amount > spent, "Insufficient amount for gas fee");
-      amount -= spent;
-    } else {
-      require(amount > gasFee, "Insufficient amount for gas fee");
-      amount -= gasFee;
+        require(amount > inputForGas, "Insufficient amount for gas swap");
+        swapAmount = amount - inputForGas;
     }
-    uint256 withdrawAmount;
 
+
+    uint256 outputAmount;
     if (zrc20 != targetZrc20) {
-      withdrawAmount = SwapHelperLib.swapExactTokensForTokens(
-          uniswapRouter,
-          zrc20,
-          amount,
-          targetZrc20,
-          0
-      );
-      require(withdrawAmount > 0, "Zero output amount");
+        outputAmount = SwapHelperLib.swapExactTokensForTokens(
+            uniswapRouter,
+            zrc20,
+            swapAmount,
+            targetZrc20,
+            0 
+        );
     } else {
-      withdrawAmount = amount;
+        outputAmount = swapAmount;
     }
-    
 
-    
+
     if (gasZRC20 == targetZrc20) {
-      uint256 total = gasFee + withdrawAmount;
-      IERC20(targetZrc20).approve(zetachainGateway, 0);
-      IERC20(targetZrc20).approve(zetachainGateway, total);
-    } else {
-      IERC20(gasZRC20).approve(zetachainGateway, 0);
-      IERC20(gasZRC20).approve(zetachainGateway, gasFee);
 
-      IERC20(targetZrc20).approve(zetachainGateway, 0);
-      IERC20(targetZrc20).approve(zetachainGateway, withdrawAmount);
+        IERC20(targetZrc20).approve(zetachainGateway, outputAmount);
+    } else {
+
+        IERC20(gasZRC20).approve(zetachainGateway, gasFee);
+        IERC20(targetZrc20).approve(zetachainGateway, outputAmount);
+    }
+
+
+    if (gasZRC20 == targetZrc20) {
+        require(outputAmount > gasFee, "Insufficient output for gas fee");
+        IGatewayZEVM(zetachainGateway).withdraw(
+            receiver, 
+            outputAmount - gasFee, 
+            targetZrc20, 
+            gasLimit,
+            revertOptions
+        );
+    } else {
+
+        IGatewayZEVM(zetachainGateway).withdraw(
+            receiver, 
+            outputAmount, 
+            targetZrc20, 
+            gasLimit,
+            revertOptions
+        );
     }
     
-
-    
-
-    IGatewayZEVM(zetachainGateway).withdraw(receiver,withdrawAmount,targetZrc20,revertOptions);
-    emit Withdraw(withdrawAmount, zrc20, targetZrc20);
   }
 }
