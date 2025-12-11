@@ -29,6 +29,26 @@ import { TEST_ENCRYPTION_KEY, TEST_NETWORK } from "./constants";
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
 import { Contract, type ContractTransaction } from "ethers";
 import { TokenData } from "@railgun-community/engine";
+import { overrideArtifact } from "@railgun-community/wallet";
+import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
+
+const setupZetachainOverrides = () => {
+  // Override Relay Adapt Contract
+  const ZETACHAIN_ADAPT_ADDRESS = "0xa69D6437F95C116eF70BCaf3696b186DFF6aCD49";
+  NETWORK_CONFIG[NetworkName.ZetachainTestnet].relayAdaptContract = ZETACHAIN_ADAPT_ADDRESS;
+
+  // Override Artifacts
+  const artifacts = listArtifacts();
+  for (const artifactConfig of artifacts) {
+    const artifact = getArtifact(artifactConfig.nullifiers, artifactConfig.commitments);
+    const variant = `${artifactConfig.nullifiers}x${artifactConfig.commitments}`;
+    overrideArtifact(variant, {
+      ...artifact,
+      dat: undefined
+    });
+  }
+  console.log("Overridden artifacts with test artifacts");
+}
 
 export const crossContractGasEstimate = async (
   encryptionKey: string,
@@ -144,6 +164,7 @@ export const generateUnshieldOutsideChainData = async (
   encryptionKey: string,
   railgunWalletInfo: RailgunWalletInfo
 ) => {
+  setupZetachainOverrides();
   const { wallet, provider } = getProviderWallet();
   
   // Ensure engine is synced to get latest Merkle Root
