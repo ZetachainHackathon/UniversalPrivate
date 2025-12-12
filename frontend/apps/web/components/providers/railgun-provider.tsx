@@ -12,6 +12,7 @@ type RailgunContextType = {
   scanProgress: number; // 0 ~ 1 (代表 0% ~ 100%)
   balances: RailgunBalancesEvent | null; // 儲存最新的餘額物件
   refresh: () => void; // 提供一個手動重新整理的函數
+  reset: () => void; // 重置狀態 (切換帳號用)
 };
 
 const RailgunContext = createContext<RailgunContextType>({
@@ -19,6 +20,7 @@ const RailgunContext = createContext<RailgunContextType>({
   scanProgress: 0,
   balances: null,
   refresh: () => {},
+  reset: () => {},
 });
 
 export const useRailgun = () => useContext(RailgunContext);
@@ -31,6 +33,12 @@ export default function RailgunProvider({
   const [isReady, setIsReady] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [balances, setBalances] = useState<RailgunBalancesEvent | null>(null);
+
+  // 重置狀態
+  const reset = useCallback(() => {
+    setBalances(null);
+    setScanProgress(0);
+  }, []);
 
   useEffect(() => {
     const start = async () => {
@@ -77,7 +85,8 @@ export default function RailgunProvider({
       isReady, 
       scanProgress,
       balances, 
-      refresh: handleRefresh 
+      refresh: handleRefresh,
+      reset 
     }}>
       {children}
     </RailgunContext.Provider>

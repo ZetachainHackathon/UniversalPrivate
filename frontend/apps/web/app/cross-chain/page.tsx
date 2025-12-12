@@ -13,10 +13,10 @@ import { useRailgun } from "@/components/providers/railgun-provider";
 import { Button } from "@repo/ui/components/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 import { TEST_NETWORK } from "@/constants";
-import { NetworkName } from "@railgun-community/shared-models";
+import { NETWORK_CONFIG, NetworkName } from "@railgun-community/shared-models";
 
 // 預設值 (Sepolia)
-const DEFAULT_ADAPT_ADDRESS = "0xc8B2bc79c5f59F6589a20de8CA1b0aF0b00dF8FF"; 
+const DEFAULT_ADAPT_ADDRESS = "0xbC3Da3B1890ED501F0d357b12BB834810c34d71E"; 
 const DEFAULT_TOKEN_ADDRESS = ZeroAddress; // 預設使用原生代幣 (ETH)
 
 const SEPOLIA_CHAIN_ID_DEC = 11155111n;
@@ -27,7 +27,7 @@ const ZETA_CHAIN_ID_HEX = "0x1b59";
 export default function CrossChainPage() {
   // 從 Context 取得 signer 和 address
   const { isConnected, signer, address, checkNetwork, connectWallet, switchNetwork } = useWallet();
-  const { balances, scanProgress } = useRailgun();
+  const { balances, scanProgress, reset } = useRailgun();
 
   // State
   const [password, setPassword] = useState("");
@@ -89,7 +89,7 @@ export default function CrossChainPage() {
              bal = await signer.provider?.getBalance(address) ?? 0n;
           } else {
              // ERC20
-             const contract = new Contract(tokenAddress, ["function balanceOf(address) view returns (uint256)"], signer);
+             const contract = new Contract(tokenAddress, ["function balanceOf(address) view returns (uint256)"], signer) as any;
              bal = await contract.balanceOf(address);
           }
           setLiveBalance(formatEther(bal));
@@ -126,10 +126,14 @@ export default function CrossChainPage() {
   const handleLoadWallet = async () => {
     if (!password) return alert("請輸入密碼");
     try {
+      // 1. 先重置餘額狀態，避免顯示上一個錢包的餘額
+      reset();
+      
       const walletInfo = await loadPrivateWallet(password);
       setRailgunAddress(walletInfo.railgunAddress);
       setWalletId(walletInfo.id);
-      // 觸發餘額掃描
+      
+      // 2. 觸發餘額掃描
       await triggerBalanceRefresh(walletInfo.id);
     } catch (e: any) {
       alert("載入失敗: " + e.message);
@@ -145,6 +149,7 @@ export default function CrossChainPage() {
       if (isScanning) return;
       isScanning = true;
       try {
+        console.log("wallet id : " , walletId);
         // console.log("⏰ 定時觸發餘額掃描...");
         await triggerBalanceRefresh(walletId);
       } catch (e) {
@@ -504,16 +509,21 @@ export default function CrossChainPage() {
                   
                   <div className="text-right mt-2">
                     <p className="text-sm text-gray-500 font-bold">隱私餘額 (Private):</p>
+                    {railgunAddress && (
+                      <p className="text-sm text-gray-700 font-mono mb-2">
+                        railgun address {NETWORK_CONFIG[TEST_NETWORK as NetworkName].proxyContract}
+                      </p>
+                    )}
                     {balances?.erc20Amounts.map((token) => {
-                        const isEth = token.tokenAddress.toLowerCase() === ZeroAddress.toLowerCase();
-                        const symbol = isEth ? "ETH" : `Token (${token.tokenAddress.slice(0,6)}...)`;
-                        // 只顯示大於 0 的餘額
-                        if (token.amount === 0n) return null;
-                        return (
-                        <p key={token.tokenAddress} className="text-sm text-gray-500">
-                            {Number(formatEther(token.amount)).toFixed(4)} {symbol}
-                        </p>
-                        );
+                      const isEth = token.tokenAddress.toLowerCase() === ZeroAddress.toLowerCase();
+                      const symbol = isEth ? "ETH" : `Token (${token.tokenAddress.slice(0,6)}...)`;
+                      // 只顯示大於 0 的餘額
+                      if (token.amount === 0n) return null;
+                      return (
+                      <p key={token.tokenAddress} className="text-sm text-gray-500">
+                        {Number(formatEther(token.amount)).toFixed(4)} {symbol}
+                      </p>
+                      );
                     })}
                     {(!balances || balances.erc20Amounts.length === 0) && (
                         <p className="text-sm text-gray-500">0.0000 (No Balance)</p>

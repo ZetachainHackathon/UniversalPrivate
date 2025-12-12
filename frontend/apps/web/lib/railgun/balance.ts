@@ -4,7 +4,8 @@ import {
   setOnUTXOMerkletreeScanCallback,
   setOnTXIDMerkletreeScanCallback,
   setOnBalanceUpdateCallback,
-  refreshBalances
+  refreshBalances,
+  getEngine
 } from "@railgun-community/wallet";
 import {
   MerkletreeScanUpdateEvent,
@@ -62,6 +63,11 @@ export const triggerBalanceRefresh = async (walletId: string) => {
   console.log("🔄 開始掃描餘額...", chain);
   
   try {
+    // 0. 確保 Merkle Tree 同步 (與 Test Script 一致)
+    // Test Script: await getEngine().scanContractHistory(chain, undefined);
+    console.log("🌳 同步 Merkle Tree...");
+    //await getEngine().scanContractHistory(chain, undefined);
+
     // 這是一個 Promise，當掃描全部完成後才會 resolve
     await refreshBalances(chain, [walletId]);
     console.log("✅ 掃描完成！");

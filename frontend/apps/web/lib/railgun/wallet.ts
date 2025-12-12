@@ -5,10 +5,9 @@ import {
     SnarkJSGroth16,
     loadProvider
 } from '@railgun-community/wallet';
-import { createWebDatabase } from './db'; // 👈 引用我們寫好的 Web DB
+import { createWebDatabase, clearWebDatabase } from './db'; // 👈 引用我們寫好的 Web DB
 import { createWebArtifactStore } from './artifact-store'; // 👈 引用我們寫好的 Web Store
 import {
-    NetworkName,
     FallbackProviderJsonConfig,
     NETWORK_CONFIG,
     POIList
@@ -27,8 +26,11 @@ export const initializeEngine = async (): Promise<boolean> => {
 
         setEngineLoggers();
 
+        // 0. 強制清除舊的資料庫 (避免 Stale Data)
+        await clearWebDatabase('railgun-web-db');
+
         // 1. 設定錢包識別名稱 (可隨意改)
-        const walletSource = "My Web Wallet";
+        const walletSource = "My Wallet";
 
         // 2. 設定資料庫 (使用 IndexedDB)
         const db = createWebDatabase('railgun-web-db');
@@ -110,6 +112,10 @@ export const loadEngineProvider = async () => {
     // 雖然 NETWORK_CONFIG 裡有，但為了避免型別錯誤，我們手動轉成 Number
     const chainIdNumber = Number(NETWORK_CONFIG[TEST_NETWORK].chain.id);
     
+    // 🔍 Debug: 印出 Railgun 合約地址
+    console.log("🔍 Railgun Contract Address:", NETWORK_CONFIG[TEST_NETWORK].proxyContract);
+    console.log("🔍 Deployment Block:", NETWORK_CONFIG[TEST_NETWORK].deploymentBlock);
+
     // 2. 建構設定檔
     const providerConfig: FallbackProviderJsonConfig = {
       chainId: chainIdNumber, // 👈 這裡必須是 number 型別 (例如 7001)

@@ -69,7 +69,7 @@ export const createPrivateWallet = async (
   const railgunWalletInfo = await createRailgunWallet(
     encryptionKey,
     mnemonic,
-    creationBlockMap
+    undefined // creationBlockMap - 使用 undefined 讓 SDK 自動處理 (與 Test Script 一致)
   );
 
   // 4. 將 Wallet ID 存入 LocalStorage (方便下次自動載入)

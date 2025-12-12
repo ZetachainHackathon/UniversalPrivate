@@ -17,3 +17,25 @@ export const createWebDatabase = (dbLocationPath: string) => {
   
   return db;
 };
+
+/**
+ * 清除指定的 IndexedDB 資料庫
+ * @param dbName 資料庫名稱
+ */
+export const clearWebDatabase = async (dbName: string) => {
+  console.log(`🗑️ 正在清除 IndexedDB: ${dbName}`);
+  return new Promise<void>((resolve, reject) => {
+    const req = indexedDB.deleteDatabase(dbName);
+    req.onsuccess = () => {
+      console.log(`✅ IndexedDB ${dbName} 已清除`);
+      resolve();
+    };
+    req.onerror = (event) => {
+      console.error(`❌ 清除 IndexedDB ${dbName} 失敗`, event);
+      reject(event);
+    };
+    req.onblocked = () => {
+      console.warn(`⚠️ 清除 IndexedDB ${dbName} 被阻塞 (可能有其他分頁開啟中)`);
+    };
+  });
+};

@@ -9,6 +9,7 @@ import {
     serializeERC20Transfer,
 } from "./transaction-utils";
 import { getProviderWallet } from "@/lib/utils";
+import { TEST_TOKEN } from "@/constants";
 
 // EVMAdapt 合約 ABI
 const EVM_ADAPT_ABI = [
@@ -81,6 +82,10 @@ export const executeCrossChainShield = async (
     const isNativePay = tokenAddress === ZeroAddress || shouldUseNativeAsset;
     let valueToSend = 0n;
 
+    // 決定 Shield Request 中要使用的 Token Address
+    // 如果是 Native Token (ZeroAddress)，在 Shield Request 中必須填入目標鏈上的 ZRC20 地址 (TEST_TOKEN)
+    const shieldTokenAddress = (tokenAddress === ZeroAddress) ? TEST_TOKEN : tokenAddress;
+
     if (isNativePay) {
         console.log("ETH 模式: 使用原生代幣支付 (跳過 Approve)。");
         valueToSend = amount;
@@ -105,7 +110,7 @@ export const executeCrossChainShield = async (
     const random = ByteUtils.randomHex(16);
 
     const shieldRequests = await generateERC20ShieldRequests(
-        serializeERC20Transfer(tokenAddress, amount, railgunAddress),
+        serializeERC20Transfer(shieldTokenAddress, amount, railgunAddress),
         random,
         shieldPrivateKey,
     );
