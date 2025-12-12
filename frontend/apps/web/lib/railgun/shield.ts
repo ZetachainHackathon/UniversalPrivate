@@ -122,7 +122,6 @@ export const erc20PopulateShieldTransaction = async (
     network,
     gasEstimate,
     sendWithPublicWallet,
-    // @ts-expect-error JsonRpcSigner is compatible
     wallet
   );
 

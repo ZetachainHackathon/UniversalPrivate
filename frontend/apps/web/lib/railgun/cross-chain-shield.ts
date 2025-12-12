@@ -8,7 +8,6 @@ import {
     generateERC20ShieldRequests,
     serializeERC20Transfer,
 } from "./transaction-utils";
-import { getProviderWallet } from "@/lib/utils";
 import { TEST_TOKEN } from "@/constants";
 
 // EVMAdapt 合約 ABI

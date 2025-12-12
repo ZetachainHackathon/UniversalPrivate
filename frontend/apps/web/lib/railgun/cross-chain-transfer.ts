@@ -4,6 +4,8 @@ import {
     type Wallet,
     ZeroAddress,
     parseUnits,
+    getBytes,
+    ContractTransaction,
 } from "ethers";
 import {
     getEngine,
@@ -15,6 +17,12 @@ import {
     RailgunERC20Amount,
     calculateGasPrice,
     TXIDVersion,
+    NETWORK_CONFIG,
+    RailgunNFTAmount,
+    RailgunNFTAmountRecipient,
+    RailgunERC20Recipient,
+    RailgunERC20AmountRecipient,
+    NetworkName,
 } from "@railgun-community/shared-models";
 import { getEncryptionKeyFromPassword } from "./encryption";
 import {
@@ -23,12 +31,14 @@ import {
     getOriginalGasDetailsForTransaction,
 } from "./transaction-utils";
 import { TEST_NETWORK } from "@/constants";
+// import { overrideArtifact } from "@railgun-community/wallet";
+// import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
 
 // Constants from test/unshield.ts
 const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH
 const TARGET_ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // Target Chain Token
 const ZETACHAIN_ADAPT_ADDRESS = "0xa69D6437F95C116eF70BCaf3696b186DFF6aCD49";
-const EVM_ADAPT_ADDRESS = "0xF6bf8ffd0460f922B98EE2fE8d101Da1781E1E59"; // Sepolia EVMAdapt
+const EVM_ADAPT_ADDRESS = "0xbC3Da3B1890ED501F0d357b12BB834810c34d71E"; // Sepolia EVMAdapt
 
 // ABIs
 const ZRC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
@@ -38,6 +48,60 @@ const ZETACHAIN_ADAPT_ABI = [
 const EVM_ADAPT_ABI = [
     "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable",
 ];
+
+// const setupZetachainOverrides = () => {
+//   // Override Artifacts
+//   const artifacts = listArtifacts();
+//   for (const artifactConfig of artifacts) {
+//     const artifact = getArtifact(artifactConfig.nullifiers, artifactConfig.commitments);
+//     const variant = `${artifactConfig.nullifiers}x${artifactConfig.commitments}`;
+//     overrideArtifact(variant, {
+//       ...artifact,
+//       dat: undefined
+//     });
+//   }
+//   console.log("Overridden artifacts with test artifacts");
+// }
+
+export const crossContractGenerateProof = async (
+    encryptionKey: string,
+    network: NetworkName,
+    railgunWalletID: string,
+    erc20AmountUnshieldAmounts: RailgunERC20Amount[],
+    erc721AmountUnshieldAmounts: RailgunNFTAmount[],
+    erc20AmountShieldRecipients: RailgunERC20Recipient[],
+    erc721AmountShieldRecipients: RailgunNFTAmountRecipient[],
+    crossContractCalls: ContractTransaction[],
+    overallBatchMinGasPrice: bigint,
+    minGasLimit: bigint,
+    sendWithPublicWallet: boolean = true,
+    broadcasterFeeERC20AmountRecipient:
+        | RailgunERC20AmountRecipient
+        | undefined = undefined
+) => {
+    const progressCallback = (progress: number) => {
+        // Handle proof progress (show in UI).
+        // Proofs can take 20-30 seconds on slower devices.
+        console.log("CrossContract Call Proof progress: ", progress);
+    };
+    // GENERATES RAILGUN SPENDING PROOF
+    await generateCrossContractCallsProof(
+        TXIDVersion.V2_PoseidonMerkle,
+        network,
+        railgunWalletID,
+        encryptionKey,
+        erc20AmountUnshieldAmounts,
+        erc721AmountUnshieldAmounts,
+        erc20AmountShieldRecipients,
+        erc721AmountShieldRecipients,
+        crossContractCalls,
+        broadcasterFeeERC20AmountRecipient,
+        sendWithPublicWallet,
+        overallBatchMinGasPrice,
+        minGasLimit,
+        progressCallback
+    );
+};
 
 export const generateUnshieldOutsideChainData = async (
     password: string,
@@ -49,6 +113,9 @@ export const generateUnshieldOutsideChainData = async (
     const encryptionKey = await getEncryptionKeyFromPassword(password);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const engine = getEngine();
+    console.log("Syncing engine...");
+    await engine.scanContractHistory(NETWORK_CONFIG[TEST_NETWORK].chain, undefined);
+    console.log("Engine synced.");
 
     // Constants
     const GAS_LIMIT = 500000n;
@@ -58,8 +125,8 @@ export const generateUnshieldOutsideChainData = async (
 
     // 1. Prepare Cross-Contract Calls
     // A. Transfer ZRC20 to ZetachainAdapt
-    const zrc20 = new Contract(ZRC20_ADDRESS, ZRC20_ABI, signer);
-    const transferData = await zrc20.getFunction("transfer").populateTransaction(
+    const zrc20 = new Contract(ZRC20_ADDRESS, ZRC20_ABI, signer.provider) as any;
+    const transferData = await zrc20.transfer.populateTransaction(
         ZETACHAIN_ADAPT_ADDRESS,
         amountAfterFee
     );
@@ -68,10 +135,10 @@ export const generateUnshieldOutsideChainData = async (
     const zetachainAdaptContract = new Contract(
         ZETACHAIN_ADAPT_ADDRESS,
         ZETACHAIN_ADAPT_ABI,
-        signer
-    );
-    const withdrawData = await zetachainAdaptContract.getFunction("withdraw").populateTransaction(
-        recipientAddress, // bytes receiver
+        signer.provider
+    ) as any;
+    const withdrawData = await zetachainAdaptContract.withdraw.populateTransaction(
+        getBytes(recipientAddress), // bytes receiver
         amountAfterFee,
         ZRC20_ADDRESS,
         TARGET_ZRC20_ADDRESS,
@@ -85,7 +152,7 @@ export const generateUnshieldOutsideChainData = async (
         }
     );
 
-    const crossContractCalls = [
+    const crossContractCalls: ContractTransaction[] = [
         {
             to: transferData.to!,
             data: transferData.data!,
@@ -109,7 +176,8 @@ export const generateUnshieldOutsideChainData = async (
 
     const originalGasDetails = await getOriginalGasDetailsForTransaction(
         TEST_NETWORK,
-        sendWithPublicWallet
+        sendWithPublicWallet,
+        signer
     );
 
     console.log("⏳ Estimating Gas for Cross-Chain Transfer...");
@@ -135,28 +203,27 @@ export const generateUnshieldOutsideChainData = async (
         TEST_NETWORK,
         gasEstimate,
         sendWithPublicWallet,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         signer as any
     );
     const overallBatchMinGasPrice = calculateGasPrice(transactionGasDetails);
 
+    // setupZetachainOverrides();
     // 5. Generate Proof
+
+    // generate proof
     console.log("⏳ Generating Proof...");
-    await generateCrossContractCallsProof(
-        TXIDVersion.V2_PoseidonMerkle,
+    await crossContractGenerateProof(
+        encryptionKey,
         TEST_NETWORK,
         railgunWalletId,
-        encryptionKey,
         erc20AmountUnshieldAmounts,
         [],
         [],
         [],
         crossContractCalls,
-        undefined, // broadcasterFeeERC20AmountRecipient
-        sendWithPublicWallet,
         overallBatchMinGasPrice,
         minGasLimit,
-        (progress) => console.log("Proof Progress:", progress)
+        true
     );
     console.log("✅ Proof Generated");
 

@@ -4,17 +4,20 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000 --webpack",
-    "build": "next build",
+    "dev": "pnpm copy-artifacts && next dev --port 3000 --webpack",
+    "build": "pnpm copy-artifacts && next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "copy-artifacts": "mkdir -p public/test-artifacts && cp -r node_modules/railgun-circuit-test-artifacts/circuits/* public/test-artifacts/"
   },
   "dependencies": {
     "@railgun-community/engine": "^9.5.1",
     "@repo/ui": "workspace:*",
     "bech32": "^2.0.0",
+    "brotli-wasm": "^3.0.1",
     "next": "^16.0.7",
+    "railgun-circuit-test-artifacts": "https://ipfs-lb.com/ipfs/QmPvs6Lws1MS4CTMAQ6P3WfyFpWFKGu7o6cSbWCu3vgXLW/railgun-circuit-test-artifacts-0.0.1.tgz",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

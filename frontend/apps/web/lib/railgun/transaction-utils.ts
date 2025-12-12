@@ -20,9 +20,8 @@ import {
 
 import { RailgunEngine, ShieldNoteERC20,ShieldRequestStruct  } from "@railgun-community/engine";
 
-import { keccak256, type HDNodeWallet, type Wallet } from "ethers";
+import { keccak256, type HDNodeWallet, type Wallet, type JsonRpcSigner } from "ethers";
 import { TEST_NETWORK } from "@/constants";
-import { getProviderWallet } from "@/lib/utils";
 
 export const generateERC20ShieldRequests = async (
   erc20AmountRecipient: RailgunERC20AmountRecipient,
@@ -109,14 +108,14 @@ export const serializeERC721Transfer = (
 
 export const getOriginalGasDetailsForTransaction = async (
   network: NetworkName,
-  sendWithPublicWallet: boolean
+  sendWithPublicWallet: boolean,
+  signer: Wallet | HDNodeWallet | JsonRpcSigner
 ): Promise<TransactionGasDetails> => {
-  const { wallet } = getProviderWallet();
   const gasDetails = await getGasDetailsForTransaction(
     network,
     0n,
     sendWithPublicWallet,
-    wallet
+    signer
   );
   return gasDetails;
 };
@@ -125,7 +124,7 @@ export const getGasDetailsForTransaction = async (
   network: NetworkName,
   gasEstimate: bigint,
   sendWithPublicWallet: boolean,
-  wallet: Wallet | HDNodeWallet
+  wallet: Wallet | HDNodeWallet | JsonRpcSigner
 ): Promise<TransactionGasDetails> => {
   const evmGasType: EVMGasType = getEVMGasTypeForTransaction(
     network,
@@ -170,17 +169,3 @@ export const getGasDetailsForTransaction = async (
   return gasDetails;
 };
 
-export const TEST_gasDetails = async () => {
-  try {
-    const { wallet } = getProviderWallet();
-    const gasDetails = await getGasDetailsForTransaction(
-      TEST_NETWORK,
-      21000n,
-      true,
-      wallet
-    );
-    console.log("🔥 Gas Details 測試結果:", gasDetails);
-  } catch (e) {
-    console.error("Gas Details 測試失敗:", e);
-  }
-};

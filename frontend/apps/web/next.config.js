@@ -2,17 +2,15 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  experimental: {
-    serverComponentsExternalPackages: [
-      '@railgun-community/wallet',
-      '@railgun-community/engine',
-      '@railgun-community/curve25519-scalarmult-wasm',
-      'snarkjs',
-      'leveldown', 
-    ],
-  },
+  serverExternalPackages: [
+    '@railgun-community/wallet',
+    '@railgun-community/engine',
+    '@railgun-community/curve25519-scalarmult-wasm',
+    'snarkjs',
+    'leveldown', 
+  ],
   
-  webpack: (config) => {
+  webpack: (config, { webpack }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -21,7 +19,15 @@ const nextConfig = {
       crypto: false,
       path: false,
       stream: false,
+      zlib: false,
     };
+    
+    config.plugins.push(
+      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+        resource.request = resource.request.replace(/^node:/, "");
+      })
+    );
+
     return config;
   },
 };
