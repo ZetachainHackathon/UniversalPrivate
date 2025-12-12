@@ -9,13 +9,18 @@ overrides:
   '@railgun-community/wallet': 10.4.0
   ethers: 6.13.1
 
+patchedDependencies:
+  '@railgun-community/shared-models@7.6.1':
+    hash: lwggiherqi2mh7p3jxd3d4fane
+    path: patches/@railgun-community__shared-models@7.6.1.patch
+
 importers:
 
   .:
     dependencies:
       '@railgun-community/shared-models':
         specifier: 7.6.1
-        version: 7.6.1(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+        version: 7.6.1(patch_hash=lwggiherqi2mh7p3jxd3d4fane)(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       '@railgun-community/wallet':
         specifier: 10.4.0
         version: 10.4.0(@graphql-tools/utils@10.11.0(graphql@16.12.0))(@types/node@22.19.2)(bufferutil@4.0.9)(chai@5.3.3)(react-native@0.82.1(@babel/core@7.28.5)(@types/react@19.2.2)(bufferutil@4.0.9)(react@19.2.1)(utf-8-validate@5.0.10))(tslib@2.8.1)(utf-8-validate@5.0.10)
@@ -6038,7 +6043,7 @@ snapshots:
 
   '@railgun-community/poseidon-hash-wasm@1.0.1': {}
 
-  '@railgun-community/shared-models@7.6.1(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))':
+  '@railgun-community/shared-models@7.6.1(patch_hash=lwggiherqi2mh7p3jxd3d4fane)(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))':
     dependencies:
       ethers: 6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
 
@@ -6056,7 +6061,7 @@ snapshots:
       '@graphql-mesh/utils': 0.43.23(@graphql-mesh/cross-helpers@0.3.4(@graphql-tools/utils@10.11.0(graphql@16.12.0))(graphql@16.12.0)(react-native@0.82.1(@babel/core@7.28.5)(@types/react@19.2.2)(bufferutil@4.0.9)(react@19.2.1)(utf-8-validate@5.0.10)))(@graphql-mesh/types@0.91.15)(@graphql-tools/utils@10.11.0(graphql@16.12.0))(graphql@16.12.0)(tslib@2.8.1)
       '@noble/ed25519': 1.7.5
       '@railgun-community/engine': 9.4.0(bufferutil@4.0.9)(chai@5.3.3)(utf-8-validate@5.0.10)
-      '@railgun-community/shared-models': 7.6.1(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      '@railgun-community/shared-models': 7.6.1(patch_hash=lwggiherqi2mh7p3jxd3d4fane)(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))
       '@whatwg-node/fetch': 0.8.8
       assert: 2.0.0
       axios: 1.7.2

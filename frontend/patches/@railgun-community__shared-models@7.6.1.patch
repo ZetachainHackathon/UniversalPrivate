@@ -1,0 +1,132 @@
+diff --git a/dist/models/network-config.d.ts b/dist/models/network-config.d.ts
+index d063637dedb51cee73d66eb25f5e0d8eeb21086d..2eb5cbc308dea1f73608d154d94c9ac9bc734109 100644
+--- a/dist/models/network-config.d.ts
++++ b/dist/models/network-config.d.ts
+@@ -14,7 +14,8 @@ export declare enum NetworkName {
+     EthereumRopsten_DEPRECATED = "Ethereum_Ropsten",
+     EthereumGoerli_DEPRECATED = "Ethereum_Goerli",
+     ArbitrumGoerli_DEPRECATED = "Arbitrum_Goerli",
+-    PolygonMumbai_DEPRECATED = "Polygon_Mumbai"
++    PolygonMumbai_DEPRECATED = "Polygon_Mumbai",
++    ZetachainTestnet = "Zetachain_Testnet"
+ }
+ export type FeesSerialized = {
+     shieldFeeV2: string;
+diff --git a/dist/models/network-config.js b/dist/models/network-config.js
+index b8277322a10eb80c44f6ecbad2a14957a6690319..e2c7003aaa412cd035cbad9da91512f6c90602fa 100644
+--- a/dist/models/network-config.js
++++ b/dist/models/network-config.js
+@@ -17,6 +17,8 @@ var NetworkName;
+     NetworkName["PolygonAmoy"] = "Polygon_Amoy";
+     // Dev only
+     NetworkName["Hardhat"] = "Hardhat";
++    // Zetachain Testnet
++    NetworkName["ZetachainTestnet"] = "Zetachain_Testnet";
+     // Deprecated
+     NetworkName["EthereumRopsten_DEPRECATED"] = "Ethereum_Ropsten";
+     NetworkName["EthereumGoerli_DEPRECATED"] = "Ethereum_Goerli";
+@@ -34,6 +36,8 @@ exports.RailgunProxyContract = {
+     [NetworkName.PolygonAmoy]: '0xD1aC80208735C7f963Da560C42d6BD82A8b175B5',
+     // Dev only
+     [NetworkName.Hardhat]: '0x610178dA211FEF7D417bC0e6FeD39F05609AD788',
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: '0x4ddEcd02F0dE96402f27abF235c8d12a4dD53bd5',
+     // Deprecated
+     [NetworkName.EthereumRopsten_DEPRECATED]: '',
+     [NetworkName.EthereumGoerli_DEPRECATED]: '',
+@@ -51,6 +55,8 @@ exports.RelayAdaptContract = {
+     [NetworkName.PolygonAmoy]: '0xc340f7E17A42154674d6B50190386C9a2982D12E',
+     // Dev only
+     [NetworkName.Hardhat]: '0x0355B7B8cb128fA5692729Ab3AAa199C1753f726',
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: '0x9F5D2C429217b385355fC495DcA958e998a0b0Db',
+     // Deprecated
+     [NetworkName.EthereumRopsten_DEPRECATED]: '',
+     [NetworkName.EthereumGoerli_DEPRECATED]: '',
+@@ -68,6 +74,8 @@ exports.RailgunProxyDeploymentBlock = {
+     [NetworkName.PolygonAmoy]: 6666136,
+     // Dev only
+     [NetworkName.Hardhat]: 0,
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: 14686853,
+     // Deprecated
+     [NetworkName.EthereumRopsten_DEPRECATED]: 12226000,
+     [NetworkName.EthereumGoerli_DEPRECATED]: 7795991,
+@@ -85,6 +93,8 @@ exports.BaseTokenWrappedAddress = {
+     [NetworkName.PolygonAmoy]: '0x21d4Ec3C9a2408C5535ecc26a09d94dC7B7f5c10',
+     // Dev only
+     [NetworkName.Hardhat]: '0x8198f5d8F8CfFE8f9C413d98a0A55aEB8ab9FbB7',
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: '0x0000c9ec4042283e8139c74f4c64bcd1e0b9b54f',
+     // Deprecated
+     [NetworkName.EthereumRopsten_DEPRECATED]: '0xc778417e063141139fce010982780140aa0cd5ab',
+     [NetworkName.EthereumGoerli_DEPRECATED]: '0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6',
+@@ -102,6 +112,8 @@ exports.RailgunPoseidonMerkleAccumulatorV3Contract = {
+     [NetworkName.PolygonAmoy]: '',
+     // Dev only
+     [NetworkName.Hardhat]: '0x2B0d36FACD61B71CC05ab8F3D2355ec3631C0dd5',
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: '',
+     // Deprecated
+     [NetworkName.EthereumRopsten_DEPRECATED]: '',
+     [NetworkName.EthereumGoerli_DEPRECATED]: '',
+@@ -119,6 +131,8 @@ exports.RailgunPoseidonMerkleVerifierV3Contract = {
+     [NetworkName.PolygonAmoy]: '',
+     // Dev only
+     [NetworkName.Hardhat]: '0xfbC22278A96299D91d41C453234d97b4F5Eb9B2d',
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: '',
+     // Deprecated
+     [NetworkName.EthereumRopsten_DEPRECATED]: '',
+     [NetworkName.EthereumGoerli_DEPRECATED]: '',
+@@ -136,6 +150,8 @@ exports.RailgunTokenVaultV3Contract = {
+     [NetworkName.PolygonAmoy]: '',
+     // Dev only
+     [NetworkName.Hardhat]: '0xD84379CEae14AA33C123Af12424A37803F885889',
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: '',
+     // Deprecated
+     [NetworkName.EthereumRopsten_DEPRECATED]: '',
+     [NetworkName.EthereumGoerli_DEPRECATED]: '',
+@@ -153,6 +169,8 @@ exports.RailgunPoseidonMerkleAccumulatorV3DeploymentBlock = {
+     [NetworkName.PolygonAmoy]: 0,
+     // Dev only
+     [NetworkName.Hardhat]: 0,
++    // Zetachain Testnet
++    [NetworkName.ZetachainTestnet]: 0,
+     // Deprecated
+     [NetworkName.EthereumGoerli_DEPRECATED]: 0,
+     [NetworkName.ArbitrumGoerli_DEPRECATED]: 0,
+@@ -517,5 +535,32 @@ exports.NETWORK_CONFIG = {
+         deploymentBlockPoseidonMerkleAccumulatorV3: exports.RailgunPoseidonMerkleAccumulatorV3DeploymentBlock[NetworkName.Hardhat],
+         supportsV3: true,
+     },
++    [NetworkName.ZetachainTestnet]: {
++        chain: {
++            type: response_types_1.ChainType.EVM,
++            id: 7001,
++        },
++        name: NetworkName.ZetachainTestnet,
++        publicName: 'Zetachain Testnet',
++        shortPublicName: 'Zetachain',
++        coingeckoId: '',
++        baseToken: {
++            symbol: 'ZETA',
++            wrappedSymbol: 'WZETA',
++            wrappedAddress: exports.BaseTokenWrappedAddress[NetworkName.ZetachainTestnet],
++            decimals: 18,
++        },
++        proxyContract: exports.RailgunProxyContract[NetworkName.ZetachainTestnet],
++        relayAdaptContract: exports.RelayAdaptContract[NetworkName.ZetachainTestnet],
++        relayAdaptHistory: [''],
++        deploymentBlock: exports.RailgunProxyDeploymentBlock[NetworkName.ZetachainTestnet],
++        isTestnet: true,
++        defaultEVMGasType: response_types_1.EVMGasType.Type2,
++        poseidonMerkleAccumulatorV3Contract: exports.RailgunPoseidonMerkleAccumulatorV3Contract[NetworkName.ZetachainTestnet],
++        poseidonMerkleVerifierV3Contract: exports.RailgunPoseidonMerkleVerifierV3Contract[NetworkName.ZetachainTestnet],
++        tokenVaultV3Contract: exports.RailgunTokenVaultV3Contract[NetworkName.ZetachainTestnet],
++        deploymentBlockPoseidonMerkleAccumulatorV3: exports.RailgunPoseidonMerkleAccumulatorV3DeploymentBlock[NetworkName.ZetachainTestnet],
++        supportsV3: false,
++    }
+ };
+ //# sourceMappingURL=network-config.js.map
