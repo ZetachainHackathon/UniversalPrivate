@@ -126,7 +126,7 @@ const shieldERC20OnZetachain = async (
 
 const main = async () => {
 
-  const EVM_ADAPT_ADDRESS = "0xbC3Da3B1890ED501F0d357b12BB834810c34d71E"; // EVMAdapt address
+  const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // EVMAdapt address
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH address(ZRC20)
   const AMOUNT = BigInt("10000000000000000"); // 0.001 ZETACHAIN ETH amount
 

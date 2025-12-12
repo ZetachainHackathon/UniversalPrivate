@@ -24,18 +24,15 @@ async function logVerify(
 
 task('deploy:zetachainAdapt', 'Deploys ZetachainAdapt contract on ZetaChain')
   .addParam('railgun', 'Address of Railgun Smart Wallet contract on ZetaChain')
-  .addParam('zetachaingateway', 'Address of ZetaChain Gateway contract on ZetaChain')
   .addParam('uniswaprouter', 'Address of Uniswap Router contract on ZetaChain')
   .addParam('relayadapt', 'Address of RelayAdapt contract on ZetaChain')
   .setAction(async function (
     {
       railgun,
-      zetachaingateway,
       uniswaprouter,
       relayadapt,
     }: {
       railgun: string;
-      zetachaingateway: string;
       uniswaprouter: string;
       relayadapt: string;
     },
@@ -49,16 +46,12 @@ task('deploy:zetachainAdapt', 'Deploys ZetachainAdapt contract on ZetaChain')
     console.log(`\n=== ZetachainAdapt Deployment ===`);
     console.log(`Deployer: ${deployer.address}`);
     console.log(`Railgun Smart Wallet: ${railgun}`);
-    console.log(`ZetaChain Gateway: ${zetachaingateway}`);
     console.log(`Uniswap Router: ${uniswaprouter}`);
     console.log(`RelayAdapt: ${relayadapt}`);
 
     // Validate addresses
     if (!ethers.utils.isAddress(railgun)) {
       throw new Error(`Invalid Railgun Smart Wallet address: ${railgun}`);
-    }
-    if (!ethers.utils.isAddress(zetachaingateway)) {
-      throw new Error(`Invalid ZetaChain Gateway address: ${zetachaingateway}`);
     }
     if (!ethers.utils.isAddress(uniswaprouter)) {
       throw new Error(`Invalid Uniswap Router address: ${uniswaprouter}`);
@@ -72,13 +65,11 @@ task('deploy:zetachainAdapt', 'Deploys ZetachainAdapt contract on ZetaChain')
     const ZetachainAdapt = await ethers.getContractFactory('ZetachainAdapt');
     const zetachainAdapt = await ZetachainAdapt.deploy(
       railgun,
-      zetachaingateway,
       uniswaprouter,
       relayadapt,
     );
     await logVerify('ZetachainAdapt', zetachainAdapt, [
       railgun,
-      zetachaingateway,
       uniswaprouter,
       relayadapt,
     ]);
@@ -91,7 +82,6 @@ task('deploy:zetachainAdapt', 'Deploys ZetachainAdapt contract on ZetaChain')
         {
           zetachainAdapt: zetachainAdapt.address,
           railgunSmartWallet: railgun,
-          zetachainGateway: zetachaingateway,
           uniswapRouter: uniswaprouter,
           relayAdapt: relayadapt,
           deployer: deployer.address,
@@ -106,13 +96,12 @@ task('deploy:zetachainAdapt', 'Deploys ZetachainAdapt contract on ZetaChain')
     console.log('\n=== IMPORTANT ADDRESSES ===');
     console.log(`ZetachainAdapt: ${zetachainAdapt.address}`);
     console.log(`Railgun Smart Wallet: ${railgun}`);
-    console.log(`ZetaChain Gateway: ${zetachaingateway}`);
     console.log(`Uniswap Router: ${uniswaprouter}`);
     console.log(`RelayAdapt: ${relayadapt}`);
 
     console.log('\n=== VERIFICATION COMMAND ===');
     console.log(
-      `npx hardhat verify --network ${hre.network.name} ${zetachainAdapt.address} ${railgun} ${zetachaingateway} ${uniswaprouter} ${relayadapt}`,
+      `npx hardhat verify --network ${hre.network.name} ${zetachainAdapt.address} ${railgun} ${uniswaprouter} ${relayadapt}`,
     );
   });
 

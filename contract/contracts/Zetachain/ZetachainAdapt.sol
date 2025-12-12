@@ -22,12 +22,10 @@ contract ZetachainAdapt is UniversalContract {
   }
 
   IRailgunSmartWallet public immutable railgunSmartWallet;
-  address public immutable zetachainGateway;
   address public immutable uniswapRouter;
   address public immutable relayAdapt;
 
-  constructor(address _railgunSmartWallet, address _zetachainGateway, address _uniswapRouter, address _relayAdapt) UniversalContract() {
-    zetachainGateway = _zetachainGateway;
+  constructor(address _railgunSmartWallet, address _uniswapRouter, address _relayAdapt) UniversalContract() {
     railgunSmartWallet = IRailgunSmartWallet(_railgunSmartWallet);
     uniswapRouter = _uniswapRouter;
     relayAdapt = _relayAdapt;
@@ -77,15 +75,19 @@ contract ZetachainAdapt is UniversalContract {
 
   }
 
-  function withdraw(bytes memory receiver, uint256 amount, address zrc20,address targetZrc20,uint256 gasLimit,RevertOptions calldata revertOptions) external  {
+  function withdraw(bytes memory receiver, uint256 amount, address zrc20,address targetZrc20,RevertOptions calldata revertOptions) external  {
         
     // refer from https://github.com/zeta-chain/standard-contracts/blob/main/contracts/messaging/contracts/UniversalRouter.sol
-    (address gasZRC20, uint256 gasFee) = IZRC20(targetZrc20).withdrawGasFeeWithGasLimit(gasLimit);
+    (address gasZRC20, uint256 gasFee) = IZRC20(targetZrc20).withdrawGasFeeWithGasLimit(500000);
 
     uint256 swapAmount = amount;
     
-
-    if (gasZRC20 != targetZrc20) {
+    if (gasZRC20 == zrc20) {
+        // 如果輸入代幣本身就是 Gas Token，直接扣除
+        require(amount > gasFee, "Insufficient amount for gas");
+        swapAmount = amount - gasFee;
+    } else {
+        // 如果輸入代幣不是 Gas Token，需要先 Swap 出 Gas 費
         uint256 inputForGas = SwapHelperLib.swapTokensForExactTokens(
             uniswapRouter,
             zrc20,
@@ -97,7 +99,7 @@ contract ZetachainAdapt is UniversalContract {
         swapAmount = amount - inputForGas;
     }
 
-
+    // 3. 將剩下的 Token (swapAmount) 交換成目標 Token
     uint256 outputAmount;
     if (zrc20 != targetZrc20) {
         outputAmount = SwapHelperLib.swapExactTokensForTokens(
@@ -108,39 +110,34 @@ contract ZetachainAdapt is UniversalContract {
             0 
         );
     } else {
+        // 如果輸入Token就是目標Token(且已經扣除或處理過 Gas)
         outputAmount = swapAmount;
     }
 
 
     if (gasZRC20 == targetZrc20) {
-
-        IERC20(targetZrc20).approve(zetachainGateway, outputAmount);
+        // Gas Token就是目標Token的情況 (例如 withdraw ETH 到 Ethereum)
+        // 直接approve輸出金額+Gas fee
+        if (!IZRC20(gasZRC20).approve(address(gateway), outputAmount + gasFee)) {
+            revert ("ZetachainAdapt: Approval failed");
+        }
     } else {
-
-        IERC20(gasZRC20).approve(zetachainGateway, gasFee);
-        IERC20(targetZrc20).approve(zetachainGateway, outputAmount);
+        // Gas Token與目標Token不同(例如 withdraw USDC 到 Ethereum，需支付 ETH 作為 Gas)
+        // 分別approve gasFee和outputAmount
+        if (!IZRC20(gasZRC20).approve(address(gateway), gasFee)) {
+            revert ("ZetachainAdapt: Approval failed" );
+        }
+        if (!IZRC20(targetZrc20).approve(address(gateway), outputAmount)) {
+            revert ("ZetachainAdapt: Approval failed");
+        }
     }
 
-
-    if (gasZRC20 == targetZrc20) {
-        require(outputAmount > gasFee, "Insufficient output for gas fee");
-        IGatewayZEVM(zetachainGateway).withdraw(
-            receiver, 
-            outputAmount - gasFee, 
-            targetZrc20, 
-            gasLimit,
-            revertOptions
-        );
-    } else {
-
-        IGatewayZEVM(zetachainGateway).withdraw(
-            receiver, 
-            outputAmount, 
-            targetZrc20, 
-            gasLimit,
-            revertOptions
-        );
-    }
-    
+    // 調用 Gateway
+    gateway.withdraw(
+        abi.encodePacked(receiver),
+        outputAmount,
+        targetZrc20,
+        revertOptions
+    );
   }
 }

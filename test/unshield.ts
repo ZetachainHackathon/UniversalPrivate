@@ -176,11 +176,11 @@ export const generateUnshieldOutsideChainData = async (
   const TEST_AMOUNT = 9975000000000000n; // 0.001 ZETACHAIN ETH
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH to test
   const TARGET_ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // 目標鏈的ZRC20地址(決定要轉到哪條鏈) BASE
-  const ZETACHAIN_ADAPT_ADDRESS = "0xAd2EE52557851323731C5980596478319DF8035E"; // ZetachainAdapt address
-  const RECEIVER = ethers.getBytes(ethers.getAddress("0xc54358218ee96a250bc3f89e5592198003609bd6")); // Receiver address 20 bytes
+  const ZETACHAIN_ADAPT_ADDRESS = "0xFaf96D14d74Ee9030d89d5FD2eB479340F32843E"; // ZetachainAdapt address
+  const RECEIVER = "0xc4660f40ba6fe89b3ba7ded44cf1db73d731c95e"; // Receiver address 20 bytes
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"; // Zero address
-  // 降低 gas limit 以減少 gas fee
-  const GAS_LIMIT = 500000n; 
+
+  //const GAS_LIMIT = 500000n; 
   const unshieldFeeBasisPoints = 25n;
   const amountAfterFee = TEST_AMOUNT * (10000n - unshieldFeeBasisPoints) / 10000n ;
 
@@ -232,7 +232,7 @@ export const generateUnshieldOutsideChainData = async (
     ZETACHAIN_ADAPT_ADDRESS,
     [
       
-      "function withdraw(bytes receiver, uint256 amount, address zrc20, address targetZrc20, uint256 gasLimit, tuple(address revertAddress, bool callOnRevert, address abortAddress, bytes revertMessage, uint256 onRevertGasLimit) revertOptions) external",
+      "function withdraw(bytes receiver, uint256 amount, address zrc20, address targetZrc20, tuple(address revertAddress, bool callOnRevert, address abortAddress, bytes revertMessage, uint256 onRevertGasLimit) revertOptions) external",
     ],
     provider
   );
@@ -242,7 +242,6 @@ export const generateUnshieldOutsideChainData = async (
     amountAfterFee,
     ZRC20_ADDRESS,
     TARGET_ZRC20_ADDRESS,
-    GAS_LIMIT,
     // revertMessage 應該是 bytes，傳空 bytes
     { revertAddress: ZERO_ADDRESS, callOnRevert: false, abortAddress: ZERO_ADDRESS, revertMessage: "0x", onRevertGasLimit: 0 }
   );
@@ -345,7 +344,7 @@ export const unshieldOutsideChain = async (
 ) => {
   
   const sepoliaWallet = getSepoliaWallet();
-  const EVM_ADAPT_ADDRESS = "0xbC3Da3B1890ED501F0d357b12BB834810c34d71E"; // Sepolia EVMAdapt address
+  const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // Sepolia EVMAdapt address
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
