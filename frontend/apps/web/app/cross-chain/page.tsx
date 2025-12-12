@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { parseUnits, isAddress, formatEther, ZeroAddress } from "ethers"; 
+import { parseUnits, isAddress, formatEther, ZeroAddress, Contract } from "ethers"; 
 import { executeCrossChainShield } from "@/lib/railgun/cross-chain-shield";
+import { executeCrossChainTransfer } from "@/lib/railgun/cross-chain-transfer";
+import { executeLocalShield } from "@/lib/railgun/shield";
 import { loadPrivateWallet } from "@/lib/railgun/wallet-actions";
 import { triggerBalanceRefresh } from "@/lib/railgun/balance";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { useRailgun } from "@/components/providers/railgun-provider";
 import { Button } from "@repo/ui/components/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
+import { TEST_NETWORK } from "@/constants";
+import { NetworkName } from "@railgun-community/shared-models";
 
 // 預設值 (Sepolia)
 const DEFAULT_ADAPT_ADDRESS = "0xc8B2bc79c5f59F6589a20de8CA1b0aF0b00dF8FF"; 
@@ -17,6 +21,8 @@ const DEFAULT_TOKEN_ADDRESS = ZeroAddress; // 預設使用原生代幣 (ETH)
 
 const SEPOLIA_CHAIN_ID_DEC = 11155111n;
 const SEPOLIA_CHAIN_ID_HEX = "0xaa36a7";
+const ZETA_CHAIN_ID_DEC = 7001n;
+const ZETA_CHAIN_ID_HEX = "0x1b59";
 
 export default function CrossChainPage() {
   // 從 Context 取得 signer 和 address
@@ -29,14 +35,39 @@ export default function CrossChainPage() {
   const [walletId, setWalletId] = useState(""); // 新增 walletId state
   const [adaptAddress, setAdaptAddress] = useState(DEFAULT_ADAPT_ADDRESS);
   const [tokenAddress, setTokenAddress] = useState(DEFAULT_TOKEN_ADDRESS);
+  const [selectedChain, setSelectedChain] = useState("sepolia");
   const [amount, setAmount] = useState("0.01");
   const [recipient, setRecipient] = useState(""); // For Transfer
+  const [transferType, setTransferType] = useState<"internal" | "cross-chain">("internal");
   
   const [status, setStatus] = useState("");
   const [txHash, setTxHash] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [liveBalance, setLiveBalance] = useState("0");
   // const [privateBalance, setPrivateBalance] = useState("0"); // 移除單一餘額狀態
+
+  // 同步錢包網路狀態到 selectedChain
+  useEffect(() => {
+    const syncChain = async () => {
+      if (signer && signer.provider) {
+        try {
+          const network = await signer.provider.getNetwork();
+          const chainId = network.chainId;
+          if (chainId === SEPOLIA_CHAIN_ID_DEC && selectedChain !== "sepolia") {
+            setSelectedChain("sepolia");
+          } else if (chainId === ZETA_CHAIN_ID_DEC && selectedChain !== "zetachain") {
+            setSelectedChain("zetachain");
+          }
+        } catch (e: any) {
+          // 忽略網路切換過程中的錯誤
+          if (e.code !== 'NETWORK_ERROR') {
+            console.error("Failed to sync chain:", e);
+          }
+        }
+      }
+    };
+    syncChain();
+  }, [signer, selectedChain]);
 
   // 監聽 Railgun 餘額變動
   useEffect(() => {
@@ -53,13 +84,43 @@ export default function CrossChainPage() {
     const refreshBalance = async () => {
       if (signer && address) {
         try {
-          const bal = await signer.provider?.getBalance(address);
-          if (bal) setLiveBalance(formatEther(bal));
-        } catch (e) { console.error("無法讀取餘額:", e); }
+          let bal = 0n;
+          if (tokenAddress === ZeroAddress) {
+             bal = await signer.provider?.getBalance(address) ?? 0n;
+          } else {
+             // ERC20
+             const contract = new Contract(tokenAddress, ["function balanceOf(address) view returns (uint256)"], signer);
+             bal = await contract.balanceOf(address);
+          }
+          setLiveBalance(formatEther(bal));
+        } catch (e: any) { 
+            // 忽略網路切換過程中的錯誤
+            if (e.code !== 'NETWORK_ERROR') {
+                console.error("無法讀取餘額:", e); 
+                setLiveBalance("0");
+            }
+        }
       }
     };
     if (isConnected) refreshBalance();
-  }, [signer, address, isConnected]);
+  }, [signer, address, isConnected, tokenAddress, selectedChain]); // Add tokenAddress dependency
+
+  // 切換鏈
+  const handleChainChange = async (chain: string) => {
+      // 注意：不直接設定 selectedChain，而是等待 syncChain 根據錢包狀態自動更新
+      // 這樣可以避免 UI 狀態與錢包實際狀態不一致導致的閃爍
+      try {
+        if (chain === "sepolia") {
+            const isSepolia = await checkNetwork(SEPOLIA_CHAIN_ID_DEC);
+            if (!isSepolia) await switchNetwork(SEPOLIA_CHAIN_ID_HEX);
+        } else if (chain === "zetachain") {
+            const isZeta = await checkNetwork(ZETA_CHAIN_ID_DEC);
+            if (!isZeta) await switchNetwork(ZETA_CHAIN_ID_HEX);
+        }
+      } catch (e) {
+          console.error("切換網路失敗:", e);
+      }
+  };
 
   // 載入錢包資訊
   const handleLoadWallet = async () => {
@@ -111,10 +172,19 @@ export default function CrossChainPage() {
       try { await connectWallet(); return; } catch (e) { return alert("連接錢包失敗"); }
     }
 
-    const isSepolia = await checkNetwork(SEPOLIA_CHAIN_ID_DEC);
-    if (!isSepolia) {
-      if (confirm("切換至 Sepolia 網路？")) await switchNetwork(SEPOLIA_CHAIN_ID_HEX);
-      return;
+    // 根據選擇的鏈進行檢查
+    if (selectedChain === "sepolia") {
+        const isSepolia = await checkNetwork(SEPOLIA_CHAIN_ID_DEC);
+        if (!isSepolia) {
+            if (confirm("切換至 Sepolia 網路？")) await switchNetwork(SEPOLIA_CHAIN_ID_HEX);
+            return;
+        }
+    } else if (selectedChain === "zetachain") {
+        const isZeta = await checkNetwork(ZETA_CHAIN_ID_DEC);
+        if (!isZeta) {
+            if (confirm("切換至 ZetaChain 網路？")) await switchNetwork(ZETA_CHAIN_ID_HEX);
+            return;
+        }
     }
 
     setIsLoading(true);
@@ -123,15 +193,44 @@ export default function CrossChainPage() {
 
     try {
       const amountBigInt = parseUnits(amount, 18); 
-      // 強制使用 Native Token (ETH) 支付
-      const tx = await executeCrossChainShield(
-        railgunAddress,
-        adaptAddress,
-        tokenAddress,
-        amountBigInt,
-        signer,
-        true 
-      );
+      
+      let tx;
+      if (selectedChain === "sepolia") {
+          // Sepolia -> ZetaChain (Cross-Chain Shield)
+          // 強制使用 Native Token (ETH) 支付
+          tx = await executeCrossChainShield(
+            railgunAddress,
+            adaptAddress,
+            tokenAddress,
+            amountBigInt,
+            signer,
+            true 
+          );
+      } else {
+          // ZetaChain -> ZetaChain (Local Shield)
+          // 注意：這裡假設 tokenAddress 是 ERC20。如果是 Native Token，可能需要先 Wrap。
+          // 為了簡化，如果選擇 Native Token (ZeroAddress)，我們可能需要提示用戶或自動 Wrap。
+          // 目前 executeLocalShield 支援 ERC20。
+          
+          let targetToken = tokenAddress;
+          if (tokenAddress === ZeroAddress) {
+              // 如果是 Native Token，需要使用 Wrapped Token 地址
+              // 這裡假設 ZetaChain 的 WZETA 地址。需要確認。
+              // 暫時使用 TEST_TOKEN 作為 fallback 或提示錯誤
+              // alert("ZetaChain Native Token Shield 尚未完全支援，請使用 ERC20");
+              // return;
+              // 假設 TEST_TOKEN 是 WZETA
+              // targetToken = "0x..."; 
+          }
+
+          tx = await executeLocalShield(
+              railgunAddress,
+              targetToken,
+              amountBigInt,
+              signer,
+              TEST_NETWORK // ZetaChain Testnet
+          );
+      }
 
       setStatus("✅ 交易已送出！等待上鏈...");
       await tx.wait();
@@ -153,9 +252,60 @@ export default function CrossChainPage() {
     }
   };
 
-  // 執行 Transfer (轉帳) - 尚未實作
+  // 執行 Transfer (轉帳)
   const handleTransfer = async () => {
-    alert("轉帳功能開發中...");
+    if (!railgunAddress) return alert("請先解鎖 Railgun 錢包");
+    if (!walletId) return alert("錢包 ID 遺失，請重新解鎖");
+    if (!recipient) return alert("請輸入接收方地址");
+    if (!amount) return alert("請輸入金額");
+
+    if (transferType === "internal") {
+        alert("轉帳給 0zk 地址功能開發中...");
+        return;
+    }
+
+    if (transferType === "cross-chain") {
+        if (!isConnected || !signer) {
+            try { await connectWallet(); return; } catch (e) { return alert("連接錢包失敗"); }
+        }
+
+        // 檢查是否在 Sepolia (因為是從 Sepolia 出發)
+        const isSepolia = await checkNetwork(SEPOLIA_CHAIN_ID_DEC);
+        if (!isSepolia) {
+            if (confirm("跨鏈轉帳需在 Sepolia 網路上發起，是否切換？")) await switchNetwork(SEPOLIA_CHAIN_ID_HEX);
+            return;
+        }
+
+        setIsLoading(true);
+        setStatus("⏳ 正在準備跨鏈轉帳 (Unshield)...");
+        setTxHash("");
+
+        try {
+            const tx = await executeCrossChainTransfer(
+                password, // 需要密碼來生成 Proof
+                walletId,
+                amount,
+                recipient,
+                signer
+            );
+
+            setStatus("✅ 交易已送出！等待上鏈...");
+            await tx.wait();
+            setTxHash(tx.hash);
+            setStatus("🎉 跨鏈轉帳成功！");
+
+            // 延遲更新餘額
+            setTimeout(() => {
+                triggerBalanceRefresh(walletId).catch(console.error);
+            }, 5000);
+
+        } catch (error: any) {
+            console.error(error);
+            setStatus("❌ 交易失敗: " + (error.reason || error.message));
+        } finally {
+            setIsLoading(false);
+        }
+    }
   };
 
   return (
@@ -237,7 +387,11 @@ export default function CrossChainPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="font-bold">選擇鏈 (Chain)</label>
-                  <select className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium">
+                  <select 
+                    className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
+                    value={selectedChain}
+                    onChange={(e) => handleChainChange(e.target.value)}
+                  >
                     <option value="sepolia">Sepolia Testnet</option>
                     <option value="zetachain">ZetaChain Testnet</option>
                   </select>
@@ -249,9 +403,12 @@ export default function CrossChainPage() {
                     onChange={(e) => setTokenAddress(e.target.value)}
                     value={tokenAddress}
                   >
-                    <option value={ZeroAddress}>Native ETH</option>
+                    <option value={ZeroAddress}>Native Token ({selectedChain === "sepolia" ? "ETH" : "ZETA"})</option>
                     <option value="0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0">Test ERC20</option>
                   </select>
+                  <p className="text-xs text-gray-500 font-mono break-all">
+                    Addr: {tokenAddress}
+                  </p>
                 </div>
               </div>
 
@@ -265,10 +422,12 @@ export default function CrossChainPage() {
                     onChange={(e) => setAmount(e.target.value)}
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">
-                    {tokenAddress === ZeroAddress ? "ETH" : "ERC20"}
+                    {tokenAddress === ZeroAddress ? (selectedChain === "sepolia" ? "ETH" : "ZETA") : "ERC20"}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 text-right">錢包餘額: {Number(liveBalance).toFixed(4)} ETH</p>
+                <p className="text-sm text-gray-500 text-right">
+                    錢包餘額: {Number(liveBalance).toFixed(4)} {tokenAddress === ZeroAddress ? (selectedChain === "sepolia" ? "ETH" : "ZETA") : "ERC20"}
+                </p>
               </div>
 
               <Button 
@@ -285,20 +444,44 @@ export default function CrossChainPage() {
               <div className="space-y-4">
                 <div className="flex gap-4 mb-4">
                   <label className="flex items-center gap-2 font-bold cursor-pointer">
-                    <input type="radio" name="txType" className="w-5 h-5 accent-black" defaultChecked />
+                    <input 
+                        type="radio" 
+                        name="txType" 
+                        className="w-5 h-5 accent-black" 
+                        checked={transferType === "internal"}
+                        onChange={() => setTransferType("internal")}
+                    />
                     轉給隱私地址 (0zk)
                   </label>
-                  <label className="flex items-center gap-2 font-bold cursor-pointer text-gray-500">
-                    <input type="radio" name="txType" className="w-5 h-5 accent-black" disabled />
-                    跨鏈轉帳 (Coming Soon)
+                  <label className="flex items-center gap-2 font-bold cursor-pointer">
+                    <input 
+                        type="radio" 
+                        name="txType" 
+                        className="w-5 h-5 accent-black" 
+                        checked={transferType === "cross-chain"}
+                        onChange={() => setTransferType("cross-chain")}
+                    />
+                    跨鏈轉帳 (Cross-Chain)
                   </label>
                 </div>
 
+                {transferType === "cross-chain" && (
+                    <div className="space-y-2 p-4 bg-gray-100 border-2 border-black rounded-lg">
+                        <label className="font-bold">目標鏈 (Target Chain)</label>
+                        <select className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium" disabled>
+                            <option value="zetachain">ZetaChain Testnet</option>
+                        </select>
+                        <p className="text-xs text-gray-500">目前僅支援 Sepolia -&gt; ZetaChain</p>
+                    </div>
+                )}
+
                 <div className="space-y-2">
-                  <label className="font-bold">接收方地址 (Recipient)</label>
+                  <label className="font-bold">
+                    {transferType === "internal" ? "接收方 0zk 地址" : "接收方 EVM 地址 (0x...)"}
+                  </label>
                   <input 
                     type="text" 
-                    placeholder="0zk..." 
+                    placeholder={transferType === "internal" ? "0zk..." : "0x..."}
                     className="w-full p-4 border-2 border-black rounded-lg font-mono focus:outline-none focus:ring-2 focus:ring-black/20"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}

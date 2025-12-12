@@ -59,7 +59,7 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
         params: [{ chainId: chainIdHex }],
       });
       // 切換後重新整理頁面以更新狀態
-      window.location.reload();
+      // window.location.reload(); // 移除手動 reload，交給 chainChanged 事件處理
     } catch (error: any) {
       // 錯誤代碼 4902 代表錢包裡還沒新增這條鏈 (通常 Sepolia 預設都有，這裡先簡化處理)
       console.error("切換網路失敗:", error);
@@ -70,12 +70,29 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
   // 監聽帳號切換
   useEffect(() => {
     if ((window as any).ethereum) {
-      (window as any).ethereum.on("accountsChanged", () => {
-        window.location.reload();
-      });
-      (window as any).ethereum.on("chainChanged", () => {
-        window.location.reload();
-      });
+      const handleAccountsChanged = async (accounts: string[]) => {
+        if (accounts.length > 0) {
+          await connectWallet();
+        } else {
+          setIsConnected(false);
+          setAddress(null);
+          setSigner(null);
+        }
+      };
+
+      const handleChainChanged = async () => {
+        await connectWallet();
+      };
+
+      (window as any).ethereum.on("accountsChanged", handleAccountsChanged);
+      (window as any).ethereum.on("chainChanged", handleChainChanged);
+
+      return () => {
+        if ((window as any).ethereum.removeListener) {
+            (window as any).ethereum.removeListener("accountsChanged", handleAccountsChanged);
+            (window as any).ethereum.removeListener("chainChanged", handleChainChanged);
+        }
+      };
     }
   }, []);
 

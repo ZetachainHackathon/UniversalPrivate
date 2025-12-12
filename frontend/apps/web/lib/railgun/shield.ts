@@ -16,6 +16,7 @@ import {
   ContractTransactionResponse,
   type HDNodeWallet, 
   type Wallet, 
+  type JsonRpcSigner,
   formatUnits
 } from "ethers";
 
@@ -33,11 +34,12 @@ import { getProviderWallet } from "@/lib/utils";
  */
 export const erc20ShieldGasEstimate = async (
   network: NetworkName,
-  wallet: Wallet | HDNodeWallet,
+  wallet: Wallet | HDNodeWallet | JsonRpcSigner,
   erc20AmountRecipients: RailgunERC20AmountRecipient[]
 ) => {
+  // @ts-expect-error JsonRpcSigner is compatible for signMessage
   const shieldPrivateKey = await getShieldSignature(wallet);
-  const fromWalletAddress = wallet.address;
+  const fromWalletAddress = await wallet.getAddress();
 
   const { gasEstimate } = await gasEstimateForShield(
     TXIDVersion.V2_PoseidonMerkle,
@@ -64,11 +66,12 @@ interface IERC20 extends BaseContract {
  */
 export const erc20PopulateShieldTransaction = async (
   network: NetworkName,
-  wallet: Wallet | HDNodeWallet,
+  wallet: Wallet | HDNodeWallet | JsonRpcSigner,
   erc20AmountRecipients: RailgunERC20AmountRecipient[],
   sendWithPublicWallet: boolean
 ) => {
   const spender = NETWORK_CONFIG[network].proxyContract;
+  const walletAddress = await wallet.getAddress();
 
   // 1. 檢查並執行 Approve
   for (const amountRecipient of erc20AmountRecipients) {
@@ -88,12 +91,12 @@ export const erc20PopulateShieldTransaction = async (
         deposit: () => Promise<ContractTransactionResponse> 
     };
 
-    const balance = await contract.balanceOf(wallet.address);
-    console.log(`💰 當前 WZETA 餘額: ${formatUnits(balance, 18)}`);
+    const balance = await contract.balanceOf(walletAddress);
+    console.log(`💰 當前餘額: ${formatUnits(balance, 18)}`);
     console.log(`📉 欲 Shield 數量: ${formatUnits(amountRecipient.amount, 18)}`)
 
     // 現在 contract.allowance 被視為必定存在的函數
-    const allowance = await contract.allowance(wallet.address, spender);
+    const allowance = await contract.allowance(walletAddress, spender);
     
     if (allowance < amountRecipient.amount) {
       console.log(`⏳ 正在授權 (Approve) 代幣: ${amountRecipient.tokenAddress}...`);
@@ -112,12 +115,14 @@ export const erc20PopulateShieldTransaction = async (
     erc20AmountRecipients
   );
 
+  // @ts-expect-error JsonRpcSigner is compatible
   const shieldPrivateKey = await getShieldSignature(wallet);
 
   const gasDetails = await getGasDetailsForTransaction(
     network,
     gasEstimate,
     sendWithPublicWallet,
+    // @ts-expect-error JsonRpcSigner is compatible
     wallet
   );
 
@@ -138,6 +143,46 @@ export const erc20PopulateShieldTransaction = async (
     nullifiers,
   };
 };
+
+/**
+ * 執行 Local Shield (供前端使用)
+ */
+export const executeLocalShield = async (
+    railgunAddress: string,
+    tokenAddress: string,
+    amount: bigint,
+    signer: JsonRpcSigner | Wallet,
+    network: NetworkName = TEST_NETWORK
+) => {
+    console.log("🚀 準備執行 Local Shield...");
+    const walletAddress = await signer.getAddress();
+    console.log("發送者 (Public):", walletAddress);
+    console.log("接收者 (Private):", railgunAddress);
+
+    const erc20AmountRecipients = [
+        serializeERC20Transfer(
+            tokenAddress,
+            amount,
+            railgunAddress
+        ),
+    ];
+
+    // 準備交易 (這一步如果需要 Approve 會等待)
+    const { transaction } = await erc20PopulateShieldTransaction(
+        network,
+        signer,
+        erc20AmountRecipients,
+        true // sendWithPublicWallet
+    );
+
+    // 發送 Shield 交易
+    console.log("📤 發送 Shield 交易中...");
+    const tx = await signer.sendTransaction(transaction);
+    console.log("Transaction Hash:", tx.hash);
+
+    return tx;
+};
+
 
 /**
  * 執行 Shield 動作的主函式 (供 UI 呼叫)
