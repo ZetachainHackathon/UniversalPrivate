@@ -51,5 +51,12 @@ contract EVMAdapt  {
         gatewayEVM.depositAndCall{value: msg.value}(zetachainAdapt, message, revertOptions);
     }
 
-    
+    function transactOnZetachain(bytes calda _transactData) external payable {
+        RevertOptions memory revertOptions = _defaultRevertOptions();
+        bytes memory message = abi.encode(
+            uint256(RailgunOperation.TRANSACT),
+            abi.encode(_transactData)
+        );
+        gatewayEVM.depositAndCall{value: msg.value}(zetachainAdapt, message, revertOptions);
+    }
 }
