@@ -6,7 +6,7 @@ This directory contains deployment records for all networks where the Railgun co
 
 Each network has its own JSON file:
 - `zetachain-testnet.json` - ZetaChain Athens Testnet
-- `sepolia.json` - Ethereum Sepolia Testnet (future)
+- `sepolia.json` - Ethereum Sepolia Testnet
 - `mainnet.json` - Production deployment (future)
 
 ## JSON Format
@@ -47,7 +47,7 @@ npx hardhat run deployments/check_deployments.js --network sepolia
 ```
 
 The check script will:
-- ✓ Verify each contract exists on-chain
+- ✓ Verify each contract exists on-chain (via RPC)
 - ✓ Display contract code sizes
 - ✓ Show verification status
 - ✓ Provide block explorer links
