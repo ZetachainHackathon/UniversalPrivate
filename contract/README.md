@@ -69,9 +69,13 @@ You can also manually specify any or all parameters to override the deployment c
 ```bash
 npx hardhat deploy:evmAdapt \
   --gatewayevm 0x0c487a766110c85d301d96e33579c5b317fa4995 \
-  --zetachainadapt <zetachainAdapt> \
   --network sepolia
 ```
+
+The script will automatically load the ZetachainAdapt address from `deployments/zetachain-testnet.json`:
+- `--zetachainadapt`: From `contracts.ZetachainAdapt.address`
+
+You can also manually specify the parameter to override the deployment config.
 
 ## Deployment Management
 
