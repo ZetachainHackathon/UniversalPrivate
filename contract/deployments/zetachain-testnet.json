@@ -1,0 +1,53 @@
+{
+  "network": "zetachain-testnet",
+  "chainId": 7001,
+  "deployedAt": "2025-12-13T09:00:00Z",
+  "deployer": "0xF85d255D10EbA7Ec5a12724D134420A3C2b8EA3a",
+  "contracts": {
+    "PoseidonT3": {
+      "address": "0xdc67c1E3c19EFFd3E3e31B5dbB6464df0BC98853",
+      "verified": false
+    },
+    "PoseidonT4": {
+      "address": "0x938C8d89C65469969af2b6f0Fd27C5B35b7214DE",
+      "verified": false
+    },
+    "ProxyAdmin": {
+      "address": "0xBe9EA78901A4468DBBD5Dd8B787f85E5a739DEd6",
+      "verified": false
+    },
+    "TreasuryImplementation": {
+      "address": "0x5637Ff06b9881386Ae7f6424C02392f9bEe0D86B",
+      "verified": true
+    },
+    "TreasuryProxy": {
+      "address": "0xF9855E465a7682eC59a2F732ea19618792DaDbe2",
+      "verified": false,
+      "description": "Treasury contract proxy"
+    },
+    "RailgunImplementation": {
+      "address": "0x281D2F28B5F92aA05F552aAce93d0C003D53fB9B",
+      "verified": true,
+      "explorerUrl": "https://testnet.zetascan.com/address/0x281D2F28B5F92aA05F552aAce93d0C003D53fB9B#code"
+    },
+    "RailgunProxy": {
+      "address": "0x1bdFD03a41a3E55d3De49A27231ABEFf2dE25a55",
+      "verified": false,
+      "description": "Main Railgun Smart Wallet contract (use this address for interactions)"
+    },
+    "RelayAdapt": {
+      "address": "0x92De3D52a9f77c0dfF23c4E367604205F4028DE7",
+      "verified": true
+    },
+    "ZetachainAdapt": {
+      "address": "0xf8fb7e368A086D09CA35FfDE5f1F38600a6b0420",
+      "verified": true,
+      "explorerUrl": "https://testnet.zetascan.com/address/0xf8fb7e368A086D09CA35FfDE5f1F38600a6b0420#code"
+    }
+  },
+  "externalContracts": {
+    "WETH9": "0x5F0b1a82749cb4E2278EC87F8BF6B618dC71a8bf",
+    "ZetaChainGateway": "0x6c533f7fe93fae114d0954697069df33c9b74fd7",
+    "UniswapRouter": "0x2ca7d64A7EFE2D62A725E2B35Cf7230D6677FfEe"
+  }
+}

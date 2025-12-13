@@ -1,4 +1,6 @@
 import { task } from 'hardhat/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import type { Contract } from 'ethers';
 
 /**
@@ -65,5 +67,37 @@ task('deploy:evmAdapt', 'Deploys EVMAdapt contract on EVM chains')
     console.log(`GatewayEVM: ${gatewayevm}`);
     console.log(`ZetachainAdapt: ${zetachainadapt}`);
 
+    // Save deployment addresses to file
+    console.log('\n=== SAVING DEPLOYMENT ADDRESSES ===');
+    const deploymentsDir = path.join(__dirname, '../../deployments');
+    if (!fs.existsSync(deploymentsDir)) {
+      fs.mkdirSync(deploymentsDir, { recursive: true });
+    }
+
+    const deploymentData = {
+      network: hre.network.name,
+      chainId: (await ethers.provider.getNetwork()).chainId,
+      deployedAt: new Date().toISOString(),
+      deployer: deployer.address,
+      contracts: {
+        EVMAdapt: {
+          address: evmAdapt.address,
+          verified: false,
+          description: "Cross-chain adapter for EVM chains to send messages to ZetaChain"
+        }
+      },
+      externalContracts: {
+        GatewayEVM: gatewayevm,
+        ZetachainAdapt: zetachainadapt
+      }
+    };
+
+    const deploymentFilePath = path.join(deploymentsDir, `${hre.network.name}.json`);
+    fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentData, null, 2));
+    console.log(`✓ Saved deployment addresses to: ${deploymentFilePath}`);
+
+    console.log('\n=== 🎉 DEPLOYMENT COMPLETE ===');
+    console.log(`\n💡 To check deployment status, run:`);
+    console.log(`   npx hardhat run deployments/check_deployments.js --network ${hre.network.name}\n`);
   });
 

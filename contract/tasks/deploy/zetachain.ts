@@ -1,4 +1,6 @@
 import { task } from 'hardhat/config';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { listArtifacts, loadArtifacts } from '../../helpers/logic/artifacts';
 import type { Contract } from 'ethers';
@@ -56,7 +58,7 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     console.log('\n=== Deploying Poseidon Libraries ===');
     const poseidonT3 = await PoseidonT3.deploy();
     await logVerify('PoseidonT3', poseidonT3, []);
-    
+
     const poseidonT4 = await PoseidonT4.deploy();
     await logVerify('PoseidonT4', poseidonT4, []);
 
@@ -107,7 +109,7 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     console.log('\n=== Initializing Contracts ===');
     // Initialize Treasury with admin as the admin
     await (await treasury.initializeTreasury(adminAddress)).wait();
-    
+
     // Initialize Railgun with:
     // - treasury: treasury proxy address
     // - shieldFee: 25 (0.25%)
@@ -144,13 +146,11 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     const ZetachainAdapt = await ethers.getContractFactory('ZetachainAdapt');
     const zetachainAdapt = await ZetachainAdapt.deploy(
       proxy.address,
-      zetachaingateway,
       uniswaprouter,
       relayAdapt.address
     );
     await logVerify('Zetachain Adapt', zetachainAdapt, [
       proxy.address,
-      zetachaingateway,
       uniswaprouter,
       relayAdapt.address,
     ]);
@@ -182,6 +182,69 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
     console.log(`Uniswap Router: ${uniswaprouter}`);
     console.log(`Treasury: ${treasuryProxy.address}`);
     console.log(`Admin: ${adminAddress}`);
+
+    // Save deployment addresses to file
+    console.log('\n=== SAVING DEPLOYMENT ADDRESSES ===');
+    const deploymentsDir = path.join(__dirname, '../../deployments');
+    if (!fs.existsSync(deploymentsDir)) {
+      fs.mkdirSync(deploymentsDir, { recursive: true });
+    }
+
+    const deploymentData = {
+      network: hre.network.name,
+      chainId: (await ethers.provider.getNetwork()).chainId,
+      deployedAt: new Date().toISOString(),
+      deployer: deployer.address,
+      contracts: {
+        PoseidonT3: {
+          address: poseidonT3.address,
+          verified: false
+        },
+        PoseidonT4: {
+          address: poseidonT4.address,
+          verified: false
+        },
+        ProxyAdmin: {
+          address: proxyAdmin.address,
+          verified: false
+        },
+        TreasuryImplementation: {
+          address: treasuryImplementation.address,
+          verified: false
+        },
+        TreasuryProxy: {
+          address: treasuryProxy.address,
+          verified: false,
+          description: "Treasury contract proxy"
+        },
+        RailgunImplementation: {
+          address: implementation.address,
+          verified: false
+        },
+        RailgunProxy: {
+          address: proxy.address,
+          verified: false,
+          description: "Main Railgun Smart Wallet contract (use this address for interactions)"
+        },
+        RelayAdapt: {
+          address: relayAdapt.address,
+          verified: false
+        },
+        ZetachainAdapt: {
+          address: zetachainAdapt.address,
+          verified: false
+        }
+      },
+      externalContracts: {
+        WETH9: weth9,
+        ZetaChainGateway: zetachaingateway,
+        UniswapRouter: uniswaprouter
+      }
+    };
+
+    const deploymentFilePath = path.join(deploymentsDir, `${hre.network.name}.json`);
+    fs.writeFileSync(deploymentFilePath, JSON.stringify(deploymentData, null, 2));
+    console.log(`✓ Saved deployment addresses to: ${deploymentFilePath}`);
 
     // Verify contracts on block explorer (skip for hardhat network)
     if (hre.network.name !== 'hardhat') {
@@ -228,7 +291,7 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
         console.warn('RelayAdapt verify failed:', e);
       }
 
-      // 4) ZetachainAdapt(proxy, zetachainGateway, uniswapRouter, relayAdapt)
+      // 4) ZetachainAdapt(proxy, uniswapRouter, relayAdapt)
       // Note: ZetachainAdapt uses SwapHelperLib from @zetachain/toolkit
       // If the library is internal, it's inlined and doesn't need library address
       // If verification fails, it may be due to Blockscout's handling of external dependencies
@@ -237,7 +300,6 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
           address: zetachainAdapt.address,
           constructorArguments: [
             proxy.address,
-            zetachaingateway,
             uniswaprouter,
             relayAdapt.address,
           ],
@@ -248,6 +310,36 @@ task('deploy:zetachain', 'Creates deployment for ZetaChain')
         console.warn('Note: This may be due to Blockscout\'s handling of external library dependencies (SwapHelperLib)');
         console.warn('You may need to manually verify this contract on Blockscout');
       }
+
+      // Update deployment file with verification status
+      console.log('\n=== UPDATING VERIFICATION STATUS ===');
+      if (fs.existsSync(deploymentFilePath)) {
+        const updatedDeployment = JSON.parse(fs.readFileSync(deploymentFilePath, 'utf8'));
+
+        // Mark verified contracts
+        const verifiedContracts = ['RailgunImplementation', 'TreasuryImplementation', 'RelayAdapt', 'ZetachainAdapt'];
+        for (const contractName of verifiedContracts) {
+          if (updatedDeployment.contracts[contractName]) {
+            updatedDeployment.contracts[contractName].verified = true;
+
+            // Add explorer URL for main contracts
+            if (contractName === 'RailgunImplementation') {
+              updatedDeployment.contracts[contractName].explorerUrl =
+                `https://testnet.zetascan.com/address/${implementation.address}#code`;
+            } else if (contractName === 'ZetachainAdapt') {
+              updatedDeployment.contracts[contractName].explorerUrl =
+                `https://testnet.zetascan.com/address/${zetachainAdapt.address}#code`;
+            }
+          }
+        }
+
+        fs.writeFileSync(deploymentFilePath, JSON.stringify(updatedDeployment, null, 2));
+        console.log(`✓ Updated verification status in: ${deploymentFilePath}`);
+      }
     }
+
+    console.log('\n=== 🎉 DEPLOYMENT AND VERIFICATION COMPLETE ===');
+    console.log(`\n💡 To check deployment status, run:`);
+    console.log(`   npx hardhat run deployments/check_deployments.js --network ${hre.network.name}\n`);
   });
 
