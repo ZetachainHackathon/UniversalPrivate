@@ -53,8 +53,19 @@ contract ZetachainAdapt is UniversalContract {
 
       railgunSmartWallet.shield(shieldRequests);
     } else if (operation == uint256(RailgunOperation.TRANSACT)) {
-      Transaction[] memory transactions = abi.decode(data, (Transaction[]));
-      railgunSmartWallet.transact(transactions);
+      bytes memory transactionData = abi.decode(data, (bytes));
+      (bool success, bytes memory result) = address(railgunSmartWallet).call(transactionData);
+      if (!success) {
+        // 返回詳細的錯誤信息
+        if (result.length > 0) {
+          // 如果有錯誤數據，直接 revert 並傳遞原始錯誤
+          assembly {
+            revert(add(result, 32), mload(result))
+          }
+        } else {
+          revert("ZetachainAdapt: Unshield outside chain failed - no error data");
+        }
+      }
     } else if (operation == uint256(RailgunOperation.UNSHIELD_OUTSIDE_CHAIN)) {
       bytes memory unshieldOutsideChainData = abi.decode(data, (bytes));
       (bool success, bytes memory result) = relayAdapt.call(unshieldOutsideChainData);
