@@ -25,12 +25,13 @@ import {
   serializeERC20RelayAdaptUnshield,
   serializeERC20Transfer,
 } from "./transcation/util";
-import { TEST_ENCRYPTION_KEY, TEST_NETWORK } from "./constants";
+import { TEST_ENCRYPTION_KEY, TEST_NETWORK, ZETACHAIN_DEPLOYMENT_NETWORK, SEPOLIA_DEPLOYMENT_NETWORK } from "./constants";
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
 import { Contract, ethers, type ContractTransaction } from "ethers";
 import { TokenData } from "@railgun-community/engine";
 import { overrideArtifact } from "@railgun-community/wallet";
 import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
+import { getContractAddress } from "./deployments";
 
 const setupZetachainOverrides = () => {
   // Override Artifacts
@@ -173,12 +174,16 @@ export const generateUnshieldOutsideChainData = async (
   // generate proof,
   // populate tx
 
+  // Load contract address from deployment file
+  const ZETACHAIN_ADAPT_ADDRESS = getContractAddress(ZETACHAIN_DEPLOYMENT_NETWORK, "ZetachainAdapt");
+
   const TEST_AMOUNT = 9975000000000000n; // 0.001 ZETACHAIN ETH
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH to test
   const TARGET_ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // 目標鏈的ZRC20地址(決定要轉到哪條鏈) BASE
-  const ZETACHAIN_ADAPT_ADDRESS = "0xFaf96D14d74Ee9030d89d5FD2eB479340F32843E"; // ZetachainAdapt address
   const RECEIVER = "0xc4660f40ba6fe89b3ba7ded44cf1db73d731c95e"; // Receiver address 20 bytes
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"; // Zero address
+
+  console.log("Using ZetachainAdapt address:", ZETACHAIN_ADAPT_ADDRESS);
 
   //const GAS_LIMIT = 500000n; 
   const unshieldFeeBasisPoints = 25n;
@@ -342,9 +347,14 @@ export const unshieldOutsideChain = async (
   encryptionKey: string,
   railgunWalletInfo: RailgunWalletInfo
 ) => {
-  
+
   const sepoliaWallet = getSepoliaWallet();
-  const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // Sepolia EVMAdapt address
+
+  // Load contract address from deployment file
+  const EVM_ADAPT_ADDRESS = getContractAddress(SEPOLIA_DEPLOYMENT_NETWORK, "EVMAdapt");
+
+  console.log("Using EVMAdapt address:", EVM_ADAPT_ADDRESS);
+
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [

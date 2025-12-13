@@ -10,6 +10,8 @@ import {
 } from "@railgun-community/engine";
 
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
+import { getContractAddress } from "./deployments";
+import { SEPOLIA_DEPLOYMENT_NETWORK } from "./constants";
 
 // EVMAdapt contract ABI with complete struct definitions
 const EVM_ADAPT_ABI = [
@@ -125,16 +127,18 @@ const shieldERC20OnZetachain = async (
 };
 
 const main = async () => {
-
-  const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // EVMAdapt address
+  // Load contract address from deployment file
+  const EVM_ADAPT_ADDRESS = getContractAddress(SEPOLIA_DEPLOYMENT_NETWORK, "EVMAdapt");
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH address(ZRC20)
   const AMOUNT = BigInt("10000000000000000"); // 0.001 ZETACHAIN ETH amount
 
+  console.log("Using EVMAdapt address:", EVM_ADAPT_ADDRESS);
+
   await shieldERC20OnZetachain(
     "0zk1qyk9nn28x0u3rwn5pknglda68wrn7gw6anjw8gg94mcj6eq5u48tlrv7j6fe3z53lama02nutwtcqc979wnce0qwly4y7w4rls5cq040g7z8eagshxrw5ajy990", // Railgun address
-    EVM_ADAPT_ADDRESS, 
-    ZRC20_ADDRESS, 
-    AMOUNT, 
+    EVM_ADAPT_ADDRESS,
+    ZRC20_ADDRESS,
+    AMOUNT,
   );
   console.log("Shield transaction sent");
 };

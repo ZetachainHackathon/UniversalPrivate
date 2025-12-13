@@ -28,7 +28,7 @@ async function logVerify(
   return contract.deployTransaction.wait().then();
 }
 
-task('deploy:zetachain', 'Creates deployment for ZetaChain')
+task('deploy:railgun', 'Deploys Railgun system (Railgun Smart Wallet, RelayAdapt, ZetachainAdapt) on ZetaChain')
   .addParam('weth9', 'Address of existing WETH9 wrapped base token contract on ZetaChain')
   .addParam('zetachaingateway', 'Address of ZetaChain Gateway contract on ZetaChain')
   .addParam('uniswaprouter', 'Address of Uniswap Router contract on ZetaChain')
