@@ -48,12 +48,65 @@ npx hardhat deploy:zetachain \
   --uniswaprouter 0x2ca7d64A7EFE2D62A725E2B35Cf7230D6677FfEe
 ```
 
-### Depoly evmAdapt on Sepolia
+### Deploy evmAdapt on Sepolia
 
-```
+```bash
 npx hardhat deploy:evmAdapt \
   --gatewayevm 0x0c487a766110c85d301d96e33579c5b317fa4995 \
   --zetachainadapt <zetachainAdapt> \
   --network sepolia
 ```
+
+## Deployment Management
+
+### Check Deployed Contracts
+
+After deployment, verify all contracts are deployed correctly:
+
+```bash
+# Check contracts on ZetaChain testnet
+npx hardhat run deployments/check_deployments.js --network zetachain-testnet
+
+# Check contracts on Sepolia
+npx hardhat run deployments/check_deployments.js --network sepolia
+```
+
+The check script will display:
+- ✓ Contract deployment status
+- 📝 Verification status on block explorer
+- 🔗 Block explorer links
+- 📊 Deployment summary
+
+### Deployment Records
+
+All deployment addresses are automatically saved to `deployments/` directory:
+- `zetachain-testnet.json` - ZetaChain Athens Testnet
+- `sepolia.json` - Ethereum Sepolia Testnet
+
+Each deployment file contains:
+- Contract addresses
+- Verification status
+- Block explorer links
+- Deployment metadata (timestamp, deployer, chain ID)
+
+See [deployments/README.md](deployments/README.md) for more details.
+
+### Important Addresses
+
+After deployment, use these addresses for interactions:
+
+- **RailgunProxy**: Main contract for all Railgun operations (upgradeable)
+- **RelayAdapt**: Handles multicall operations with Railgun
+- **ZetachainAdapt**: Cross-chain adapter for ZetaChain messages
+
+Example (from latest ZetaChain testnet deployment):
+```json
+{
+  "RailgunProxy": "0x1bdFD03a41a3E55d3De49A27231ABEFf2dE25a55",
+  "RelayAdapt": "0x92De3D52a9f77c0dfF23c4E367604205F4028DE7",
+  "ZetachainAdapt": "0xf8fb7e368A086D09CA35FfDE5f1F38600a6b0420"
+}
+```
+
+Check `deployments/zetachain-testnet.json` for the complete list.
 
