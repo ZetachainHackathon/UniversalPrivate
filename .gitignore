@@ -28,3 +28,6 @@ lerna-debug.log*
 dist/
 build/
 *.log
+
+# TODO
+*.todo

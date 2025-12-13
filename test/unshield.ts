@@ -18,6 +18,8 @@ import {
   generateCrossContractCallsProof,
   populateProvedCrossContractCalls,
   TokenType,
+  startRailgunEngine,
+  stopRailgunEngine,
 } from "@railgun-community/wallet";
 import {
   getGasDetailsForTransaction,
@@ -25,12 +27,19 @@ import {
   serializeERC20RelayAdaptUnshield,
   serializeERC20Transfer,
 } from "./transcation/util";
-import { TEST_ENCRYPTION_KEY, TEST_NETWORK } from "./constants";
+import { TEST_ENCRYPTION_KEY, TEST_NETWORK, ZETACHAIN_DEPLOYMENT_NETWORK, SEPOLIA_DEPLOYMENT_NETWORK } from "./constants";
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
 import { Contract, ethers, type ContractTransaction } from "ethers";
 import { TokenData } from "@railgun-community/engine";
 import { overrideArtifact } from "@railgun-community/wallet";
 import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
+import { getContractAddress, loadDeployment } from "./deployments";
+import { createNodeDatabase } from "./db";
+import { createArtifactStore } from "./artifact";
+import type { POIList } from "@railgun-community/shared-models";
+import { loadEngineProvider } from "./loadProvider";
+import { setupNodeGroth16 } from "./prover";
+import { setupBalanceCallbacks, runBalancePoller, waitForBalancesLoaded, displaySpendableBalances } from "./balances";
 
 const setupZetachainOverrides = () => {
   // Override Artifacts
@@ -173,12 +182,16 @@ export const generateUnshieldOutsideChainData = async (
   // generate proof,
   // populate tx
 
-  const TEST_AMOUNT = 997500000000000n; // 0.001 ZETACHAIN ETH
+  // Load contract address from deployment file
+  const ZETACHAIN_ADAPT_ADDRESS = getContractAddress(ZETACHAIN_DEPLOYMENT_NETWORK, "ZetachainAdapt");
+
+  const TEST_AMOUNT = 9975000000000000n; // 0.001 ZETACHAIN ETH
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH to test
   const TARGET_ZRC20_ADDRESS = "0x236b0DE675cC8F46AE186897fCCeFe3370C9eDeD"; // 目標鏈的ZRC20地址(決定要轉到哪條鏈) BASE
-  const ZETACHAIN_ADAPT_ADDRESS = "0xFaf96D14d74Ee9030d89d5FD2eB479340F32843E"; // ZetachainAdapt address
   const RECEIVER = "0xc4660f40ba6fe89b3ba7ded44cf1db73d731c95e"; // Receiver address 20 bytes
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"; // Zero address
+
+  console.log("Using ZetachainAdapt address:", ZETACHAIN_ADAPT_ADDRESS);
 
   //const GAS_LIMIT = 500000n; 
   const unshieldFeeBasisPoints = 25n;
@@ -342,9 +355,14 @@ export const unshieldOutsideChain = async (
   encryptionKey: string,
   railgunWalletInfo: RailgunWalletInfo
 ) => {
-  
+
   const sepoliaWallet = getSepoliaWallet();
-  const EVM_ADAPT_ADDRESS = "0x42a7bdB80f12c857bA0ebF9c440e6A1D9Af675Aa"; // Sepolia EVMAdapt address
+
+  // Load contract address from deployment file
+  const EVM_ADAPT_ADDRESS = getContractAddress(SEPOLIA_DEPLOYMENT_NETWORK, "EVMAdapt");
+
+  console.log("Using EVMAdapt address:", EVM_ADAPT_ADDRESS);
+
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
@@ -360,10 +378,129 @@ export const unshieldOutsideChain = async (
   console.log("UnshieldOutsideChain data: ", unshieldOutsideChainData);
 
   //console.log(`Sending ${crossChainFee} wei as cross-chain fee`);
-  const tx = await evmAdaptContract.unshieldOutsideChain(unshieldOutsideChainData); 
+  const tx = await evmAdaptContract.unshieldOutsideChain(unshieldOutsideChainData);
   const receipt = await tx.wait();
   console.log("UnshieldOutsideChain transaction receipt: ", receipt);
   return tx;
 };
 
+/**
+ * Initializes the RAILGUN engine with the specified configuration.
+ */
+const initializeEngine = async (args?: {
+  walletSource?: string;
+  dbPath?: string;
+  artifactsPath?: string;
+  ppoiNodes?: string[];
+}): Promise<void> => {
+  const walletSource = args?.walletSource ?? "quickstart demo";
+  const dbPath = args?.dbPath ?? "./engine.db";
+  const db = createNodeDatabase(dbPath);
+  const shouldDebug = true;
+  const artifactPath = args?.artifactsPath ?? "artifacts-directory";
+  const artifactStore = createArtifactStore(artifactPath);
+  const useNativeArtifacts = false;
+  const skipMerkletreeScans = false;
+  const poiNodeURLs: string[] = args?.ppoiNodes ?? [
+    "https://ppoi-agg.horsewithsixlegs.xyz",
+  ];
+  const customPOILists: POIList[] = [];
+  const verboseScanLogging = true;
+
+  await startRailgunEngine(
+    walletSource,
+    db,
+    shouldDebug,
+    artifactStore,
+    useNativeArtifacts,
+    skipMerkletreeScans,
+    poiNodeURLs,
+    customPOILists,
+    verboseScanLogging
+  );
+
+  process.on("SIGINT", async (sigint) => {
+    console.log("EXIT DETECTED", sigint);
+    await stopRailgunEngine();
+    process.exit(0);
+  });
+};
+
+/**
+ * Main entry point for running unshield independently
+ */
+const main = async () => {
+  try {
+    // Initialize RAILGUN Engine
+    await initializeEngine();
+    console.log("RAILGUN Engine initialized");
+
+    // Configure RAILGUN contract addresses from deployment
+    const zetachainDeployment = loadDeployment(ZETACHAIN_DEPLOYMENT_NETWORK);
+    NETWORK_CONFIG[TEST_NETWORK].proxyContract = zetachainDeployment.contracts.RailgunProxy.address;
+    NETWORK_CONFIG[TEST_NETWORK].relayAdaptContract = zetachainDeployment.contracts.RelayAdapt.address;
+
+    console.log("RAILGUN contract addresses configured:");
+    console.log("  - RailgunProxy:", NETWORK_CONFIG[TEST_NETWORK].proxyContract);
+    console.log("  - RelayAdapt:", NETWORK_CONFIG[TEST_NETWORK].relayAdaptContract);
+
+    // Load Network
+    await loadEngineProvider();
+    console.log("Network loaded");
+    await setupNodeGroth16();
+    console.log("Groth16 setup");
+
+    // Define Chain (Zetachain)
+    const chain = NETWORK_CONFIG[TEST_NETWORK].chain;
+
+    // Scan contract history (sync Merkletree)
+    console.log("Starting contract history scan...");
+    await getEngine().scanContractHistory(chain, undefined);
+    console.log("Contract history scan started (this may take a while)");
+
+    // Create wallet (use your mnemonic)
+    const mnemonic = process.env.MNEMONIC || "test test test test test test test test test test test junk";
+
+    console.log("Creating Railgun wallet...");
+    const walletInfo = await createRailgunWallet(
+      TEST_ENCRYPTION_KEY,
+      mnemonic,
+      undefined, // creationBlockNumbers
+    );
+    console.log("Wallet created:");
+    console.log("Wallet ID:", walletInfo.id);
+    console.log("Railgun Address:", walletInfo.railgunAddress);
+
+    const { provider, wallet } = getProviderWallet();
+    console.log("Public Wallet Address:", wallet.address);
+
+    const balance = await provider.getBalance(wallet.address);
+    console.log("Zeta Balance:", balance.toString());
+
+    // Setup balance callbacks
+    setupBalanceCallbacks();
+
+    // Wait for balances to load
+    console.log("Waiting for balances to load...");
+    runBalancePoller([walletInfo.id]);
+    await waitForBalancesLoaded();
+
+    // Display spendable balances
+    displaySpendableBalances();
+
+    // Execute unshield
+    await unshieldOutsideChain(TEST_ENCRYPTION_KEY, walletInfo);
+
+    console.log("Unshield completed successfully!");
+    process.exit(0);
+  } catch (err) {
+    console.error("Failed to execute unshield:", err);
+    process.exit(1);
+  }
+};
+
+// Run main if this file is executed directly
+if (require.main === module) {
+  main();
+}
 
