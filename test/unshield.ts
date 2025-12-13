@@ -348,7 +348,7 @@ export const unshieldOutsideChain = async (
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
-      "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable",
+      "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external",
     ],
     sepoliaWallet.wallet
   );

@@ -161,7 +161,7 @@ export const generatePrivateTransfer = async (
   // generate proof,
   // populate tx
 
-  const TEST_AMOUNT = 9975000000000000n; // 0.001 ZETACHAIN ETH
+  const TEST_AMOUNT = 8000000000000000n; // 0.008 ZETACHAIN ETH
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH to test
   const RECEIVER = "0xc4660f40ba6fe89b3ba7ded44cf1db73d731c95e"; // Receiver address 20 bytes
 
@@ -252,7 +252,7 @@ export const executePrivateTransfer = async (
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
-      "function transactOnZetachain(bytes calldata _transactData) external payable",
+      "function transactOnZetachain(bytes calldata _transactData) external",
     ],
     sepoliaWallet.wallet
   );
