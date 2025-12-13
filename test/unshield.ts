@@ -358,7 +358,7 @@ export const unshieldOutsideChain = async (
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
-      "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable",
+      "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external",
     ],
     sepoliaWallet.wallet
   );
@@ -370,7 +370,7 @@ export const unshieldOutsideChain = async (
   console.log("UnshieldOutsideChain data: ", unshieldOutsideChainData);
 
   //console.log(`Sending ${crossChainFee} wei as cross-chain fee`);
-  const tx = await evmAdaptContract.unshieldOutsideChain(unshieldOutsideChainData, { value: 100000000000000n }); 
+  const tx = await evmAdaptContract.unshieldOutsideChain(unshieldOutsideChainData); 
   const receipt = await tx.wait();
   console.log("UnshieldOutsideChain transaction receipt: ", receipt);
   return tx;

@@ -1,17 +1,17 @@
 {
   "network": "sepolia",
   "chainId": 11155111,
-  "deployedAt": "2025-12-13T10:48:00Z",
-  "deployer": "0xF85d255D10EbA7Ec5a12724D134420A3C2b8EA3a",
+  "deployedAt": "2025-12-13T15:49:33.119Z",
+  "deployer": "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
   "contracts": {
     "EVMAdapt": {
-      "address": "0xB88a907Ba80a8C40328300A9024bf9720F10aDd2",
+      "address": "0x42a7bdB80f12c857bA0ebF9c440e6A1D9Af675Aa",
       "verified": false,
       "description": "Cross-chain adapter for EVM chains to send messages to ZetaChain"
     }
   },
   "externalContracts": {
     "GatewayEVM": "0x0c487a766110c85d301d96e33579c5b317fa4995",
-    "ZetachainAdapt": "0xf8fb7e368A086D09CA35FfDE5f1F38600a6b0420"
+    "ZetachainAdapt": "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1"
   }
 }
