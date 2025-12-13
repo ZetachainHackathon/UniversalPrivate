@@ -15,10 +15,8 @@ import { loadEngineProvider } from "./loadProvider";
 import { TEST_ENCRYPTION_KEY, TEST_TOKEN ,TEST_NETWORK, ZETACHAIN_DEPLOYMENT_NETWORK } from "./constants";
 import { getProviderWallet } from "./wallet";
 import { displaySpendableBalances, runBalancePoller, setupBalanceCallbacks, waitForBalancesLoaded } from "./balances";
-import { unshieldOutsideChain } from "./unshield";
 import { setupNodeGroth16 } from "./prover";
 import { loadDeployment } from "./deployments";
-import { executePrivateTransfer } from "./privateTransfer";
 
 /**
  * Initializes the RAILGUN engine with the specified configuration.
@@ -196,20 +194,14 @@ const main = async () => {
 
     // 1. 首先設置餘額回調
     setupBalanceCallbacks();
-    
+
     // 2. 等待餘額載入完成（這會同步 Merkle tree 和載入私有餘額）
     console.log("Waiting for balances to load...");
     runBalancePoller([walletInfo.id]);
     await waitForBalancesLoaded();
-    
+
     // 3. 顯示可用餘額
     displaySpendableBalances();
-    
-
-    //await executePrivateTransfer(TEST_ENCRYPTION_KEY, walletInfo, undefined, true);
-    //await unshieldOutsideChain(TEST_ENCRYPTION_KEY, walletInfo);
-
-    
   } catch (err) {
     console.error("Failed to initialize RAILGUN Engine:", err);
     process.exit(1);
