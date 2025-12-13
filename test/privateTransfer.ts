@@ -12,21 +12,37 @@ import {
   gasEstimateForUnprovenTransfer,
   generateTransferProof,
   populateProvedTransfer,
+  createRailgunWallet,
+  overrideArtifact,
 } from "@railgun-community/wallet";
 import {
   getGasDetailsForTransaction,
   getOriginalGasDetailsForTransaction,
   serializeERC20Transfer,
 } from "./transcation/util";
-import { TEST_NETWORK, TEST_TOKEN } from "./constants";
+import { TEST_ENCRYPTION_KEY, TEST_NETWORK, TEST_TOKEN } from "./constants";
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
 import { Contract } from "ethers";
+import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
 /*
 import {
   getBroadcasterDetails,
   getFeeTokenDetails,
 } from "./waku/waku";
  */
+const setupZetachainOverrides = () => {
+  // Override Artifacts
+  const artifacts = listArtifacts();
+  for (const artifactConfig of artifacts) {
+    const artifact = getArtifact(artifactConfig.nullifiers, artifactConfig.commitments);
+    const variant = `${artifactConfig.nullifiers}x${artifactConfig.commitments}`;
+    overrideArtifact(variant, {
+      ...artifact,
+      dat: undefined
+    });
+  }
+  console.log("Overridden artifacts with test artifacts");
+}
 
 export const erc20PrivateTransferGasEstimate = async (
   encryptionKey: string,
@@ -133,12 +149,14 @@ export const erc20PrivateTransferPopulateTransaction = async (
 
 export const generatePrivateTransfer = async (
   encryptionKey: string,
-  railgunWalletInfo: RailgunWalletInfo,
+  senderWalletInfo: RailgunWalletInfo,
+  receiverWalletInfo: RailgunWalletInfo,
   memoText: string | undefined, // optional memo text for the transfer
   sendWithPublicWallet: boolean = true
 ) => {
   console.log("TEST_PrivateTransfer");
   const { wallet } = getProviderWallet();
+  setupZetachainOverrides();
   // get gas estimate,
   // generate proof,
   // populate tx
@@ -151,7 +169,7 @@ export const generatePrivateTransfer = async (
     serializeERC20Transfer(
       ZRC20_ADDRESS, // WETH
       TEST_AMOUNT,
-      railgunWalletInfo.railgunAddress
+      receiverWalletInfo.railgunAddress
     ),
   ];
 
@@ -167,7 +185,7 @@ export const generatePrivateTransfer = async (
     await erc20PrivateTransferGasEstimate(
       encryptionKey,
       TEST_NETWORK,
-      railgunWalletInfo.id,
+      senderWalletInfo.id,
       erc20AmountRecipients,
       sendWithPublicWallet,
       undefined, // feeTokenDetails
@@ -196,7 +214,7 @@ export const generatePrivateTransfer = async (
   await erc20PrivateTransferGenerateProof(
     encryptionKey,
     TEST_NETWORK,
-    railgunWalletInfo.id,
+    senderWalletInfo.id,
     erc20AmountRecipients,
     overallBatchMinGasPrice /* overallBatchMinGasPrice */,
     true /* showSenderAddressToRecipient */,
@@ -208,7 +226,7 @@ export const generatePrivateTransfer = async (
   // populate tx
   const transaction = await erc20PrivateTransferPopulateTransaction(
     TEST_NETWORK,
-    railgunWalletInfo.id,
+    senderWalletInfo.id,
     erc20AmountRecipients,
     overallBatchMinGasPrice,
     transactionGasDetails,
@@ -225,24 +243,30 @@ export const generatePrivateTransfer = async (
 
 export const executePrivateTransfer = async (
   encryptionKey: string,
-  railgunWalletInfo: RailgunWalletInfo,
+  senderWalletInfo: RailgunWalletInfo,
   memoText: string | undefined, // optional memo text for the transfer
   sendWithPublicWallet: boolean = true
 ) => {
   const sepoliaWallet = getSepoliaWallet();
-  const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // Sepolia EVMAdapt address
+  const EVM_ADAPT_ADDRESS = "0x42a7bdB80f12c857bA0ebF9c440e6A1D9Af675Aa"; // Sepolia EVMAdapt address
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
-      "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable",
+      "function transactOnZetachain(bytes calldata _transactData) external payable",
     ],
     sepoliaWallet.wallet
   );
-  const transaction = await generatePrivateTransfer(encryptionKey, railgunWalletInfo, memoText, sendWithPublicWallet);
-  const { wallet } = getProviderWallet();
+  
+  const mnemonic = process.env.MNEMONIC || "junk junk junk test test test test test test test test test";
+  const receiverWalletInfo = await createRailgunWallet(
+    TEST_ENCRYPTION_KEY,
+    mnemonic,
+    undefined, // creationBlockNumbers
+  );
+  const transaction = await generatePrivateTransfer(encryptionKey, senderWalletInfo, receiverWalletInfo, memoText, sendWithPublicWallet);
   const data = transaction.transaction.data
 
-  const tx = await evmAdaptContract.unshieldOutsideChain(data, { value: 100000000000000n });
+  const tx = await evmAdaptContract.transactOnZetachain(data);
   await tx.wait();
   console.log("Private Transfer TX: ", tx.hash);
   return tx.hash;

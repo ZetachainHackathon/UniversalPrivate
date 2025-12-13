@@ -173,9 +173,9 @@ export const generateUnshieldOutsideChainData = async (
   // generate proof,
   // populate tx
 
-  const TEST_AMOUNT = 9975000000000000n; // 0.001 ZETACHAIN ETH
+  const TEST_AMOUNT = 997500000000000n; // 0.001 ZETACHAIN ETH
   const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH to test
-  const TARGET_ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // 目標鏈的ZRC20地址(決定要轉到哪條鏈) BASE
+  const TARGET_ZRC20_ADDRESS = "0x236b0DE675cC8F46AE186897fCCeFe3370C9eDeD"; // 目標鏈的ZRC20地址(決定要轉到哪條鏈) BASE
   const ZETACHAIN_ADAPT_ADDRESS = "0xFaf96D14d74Ee9030d89d5FD2eB479340F32843E"; // ZetachainAdapt address
   const RECEIVER = "0xc4660f40ba6fe89b3ba7ded44cf1db73d731c95e"; // Receiver address 20 bytes
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"; // Zero address
@@ -344,7 +344,7 @@ export const unshieldOutsideChain = async (
 ) => {
   
   const sepoliaWallet = getSepoliaWallet();
-  const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // Sepolia EVMAdapt address
+  const EVM_ADAPT_ADDRESS = "0x42a7bdB80f12c857bA0ebF9c440e6A1D9Af675Aa"; // Sepolia EVMAdapt address
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
@@ -360,7 +360,7 @@ export const unshieldOutsideChain = async (
   console.log("UnshieldOutsideChain data: ", unshieldOutsideChainData);
 
   //console.log(`Sending ${crossChainFee} wei as cross-chain fee`);
-  const tx = await evmAdaptContract.unshieldOutsideChain(unshieldOutsideChainData, { value: 100000000000000n }); 
+  const tx = await evmAdaptContract.unshieldOutsideChain(unshieldOutsideChainData); 
   const receipt = await tx.wait();
   console.log("UnshieldOutsideChain transaction receipt: ", receipt);
   return tx;

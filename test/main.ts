@@ -17,6 +17,7 @@ import { getProviderWallet } from "./wallet";
 import { displaySpendableBalances, runBalancePoller, setupBalanceCallbacks, waitForBalancesLoaded } from "./balances";
 import { unshieldOutsideChain } from "./unshield";
 import { setupNodeGroth16 } from "./prover";
+import { executePrivateTransfer } from "./privateTransfer";
 
 /**
  * Initializes the RAILGUN engine with the specified configuration.
@@ -164,7 +165,8 @@ const main = async () => {
 
     // Create wallet (use your mnemonic)
     const mnemonic = process.env.MNEMONIC || "test test test test test test test test test test test junk";
-    
+    // second mnemonic
+    //const mnemonic = process.env.MNEMONIC || "junk junk junk test test test test test test test test test";
     
     console.log("Creating Railgun wallet...");
     const walletInfo = await createRailgunWallet(
@@ -193,10 +195,9 @@ const main = async () => {
     // 3. 顯示可用餘額
     displaySpendableBalances();
     
-    // 4. 確認有足夠餘額後再執行 unshield
-    console.log("Starting unshield outside chain...");
-    await unshieldOutsideChain(TEST_ENCRYPTION_KEY, walletInfo);
-    console.log("Unshield Outside Chain completed");
+
+    await executePrivateTransfer(TEST_ENCRYPTION_KEY, walletInfo, undefined, true);
+    //await unshieldOutsideChain(TEST_ENCRYPTION_KEY, walletInfo);
 
     
   } catch (err) {
