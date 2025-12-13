@@ -13,7 +13,7 @@ index d063637..2eb5cbc 100644
  export type FeesSerialized = {
      shieldFeeV2: string;
 diff --git a/node_modules/@railgun-community/wallet/node_modules/@railgun-community/shared-models/dist/models/network-config.js b/node_modules/@railgun-community/wallet/node_modules/@railgun-community/shared-models/dist/models/network-config.js
-index b827732..e2c7003 100644
+index b827732..7d46060 100644
 --- a/node_modules/@railgun-community/wallet/node_modules/@railgun-community/shared-models/dist/models/network-config.js
 +++ b/node_modules/@railgun-community/wallet/node_modules/@railgun-community/shared-models/dist/models/network-config.js
 @@ -17,6 +17,8 @@ var NetworkName;
@@ -30,7 +30,7 @@ index b827732..e2c7003 100644
      // Dev only
      [NetworkName.Hardhat]: '0x610178dA211FEF7D417bC0e6FeD39F05609AD788',
 +    // Zetachain Testnet
-+    [NetworkName.ZetachainTestnet]: '0x4ddEcd02F0dE96402f27abF235c8d12a4dD53bd5',
++    [NetworkName.ZetachainTestnet]: '0xB83794561B552Ff37B3225F9190B07beDBA6Ce90',
      // Deprecated
      [NetworkName.EthereumRopsten_DEPRECATED]: '',
      [NetworkName.EthereumGoerli_DEPRECATED]: '',
@@ -39,7 +39,7 @@ index b827732..e2c7003 100644
      // Dev only
      [NetworkName.Hardhat]: '0x0355B7B8cb128fA5692729Ab3AAa199C1753f726',
 +    // Zetachain Testnet
-+    [NetworkName.ZetachainTestnet]: '0x9F5D2C429217b385355fC495DcA958e998a0b0Db',
++    [NetworkName.ZetachainTestnet]: '0xA184103178EFA1835B35D787D4b1ADD68062662a',
      // Deprecated
      [NetworkName.EthereumRopsten_DEPRECATED]: '',
      [NetworkName.EthereumGoerli_DEPRECATED]: '',

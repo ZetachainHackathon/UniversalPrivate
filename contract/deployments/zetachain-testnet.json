@@ -1,48 +1,48 @@
 {
   "network": "zetachain-testnet",
   "chainId": 7001,
-  "deployedAt": "2025-12-13T09:00:00Z",
-  "deployer": "0xF85d255D10EbA7Ec5a12724D134420A3C2b8EA3a",
+  "deployedAt": "2025-12-13T13:59:17.038Z",
+  "deployer": "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
   "contracts": {
     "PoseidonT3": {
-      "address": "0xdc67c1E3c19EFFd3E3e31B5dbB6464df0BC98853",
+      "address": "0x73AB04Fc3f371c612cA25b369512B758B6F2eAc0",
       "verified": false
     },
     "PoseidonT4": {
-      "address": "0x938C8d89C65469969af2b6f0Fd27C5B35b7214DE",
+      "address": "0xb92936c3cB6C8aDbC78b8fE5f81bC88be2f52DAE",
       "verified": false
     },
     "ProxyAdmin": {
-      "address": "0xBe9EA78901A4468DBBD5Dd8B787f85E5a739DEd6",
+      "address": "0x13697E81eF7766787BE10F86A9847A3D3Ff12A35",
       "verified": false
     },
     "TreasuryImplementation": {
-      "address": "0x5637Ff06b9881386Ae7f6424C02392f9bEe0D86B",
+      "address": "0xF70aB72072A4829C383393f3FcA2664fcb851CE3",
       "verified": true
     },
     "TreasuryProxy": {
-      "address": "0xF9855E465a7682eC59a2F732ea19618792DaDbe2",
+      "address": "0x090FF656DC68Ed195dfE62910b626E0c9955A87C",
       "verified": false,
       "description": "Treasury contract proxy"
     },
     "RailgunImplementation": {
-      "address": "0x281D2F28B5F92aA05F552aAce93d0C003D53fB9B",
+      "address": "0x39f510b07698DbE854fc742f3BcC7c73398AbD10",
       "verified": true,
-      "explorerUrl": "https://testnet.zetascan.com/address/0x281D2F28B5F92aA05F552aAce93d0C003D53fB9B#code"
+      "explorerUrl": "https://testnet.zetascan.com/address/0x39f510b07698DbE854fc742f3BcC7c73398AbD10#code"
     },
     "RailgunProxy": {
-      "address": "0x1bdFD03a41a3E55d3De49A27231ABEFf2dE25a55",
+      "address": "0xB83794561B552Ff37B3225F9190B07beDBA6Ce90",
       "verified": false,
       "description": "Main Railgun Smart Wallet contract (use this address for interactions)"
     },
     "RelayAdapt": {
-      "address": "0x92De3D52a9f77c0dfF23c4E367604205F4028DE7",
+      "address": "0xA184103178EFA1835B35D787D4b1ADD68062662a",
       "verified": true
     },
     "ZetachainAdapt": {
-      "address": "0xf8fb7e368A086D09CA35FfDE5f1F38600a6b0420",
+      "address": "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1",
       "verified": true,
-      "explorerUrl": "https://testnet.zetascan.com/address/0xf8fb7e368A086D09CA35FfDE5f1F38600a6b0420#code"
+      "explorerUrl": "https://testnet.zetascan.com/address/0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1#code"
     }
   },
   "externalContracts": {

@@ -41,22 +41,21 @@ contract EVMAdapt  {
         gatewayEVM.depositAndCall{value: msg.value}(zetachainAdapt, message, revertOptions);
     }
 
-    function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable {
-        require(msg.value > 0, "Must send ETH for cross-chain fee");
+    function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external {
         RevertOptions memory revertOptions = _defaultRevertOptions();
         bytes memory message = abi.encode(
             uint256(RailgunOperation.UNSHIELD_OUTSIDE_CHAIN),
             abi.encode(_unshieldOutsideChainData)
         );
-        gatewayEVM.depositAndCall{value: msg.value}(zetachainAdapt, message, revertOptions);
+        gatewayEVM.call(zetachainAdapt, message, revertOptions);
     }
 
-    function transactOnZetachain(bytes calldata _transactData) external payable {
+    function transactOnZetachain(bytes calldata _transactData) external {
         RevertOptions memory revertOptions = _defaultRevertOptions();
         bytes memory message = abi.encode(
             uint256(RailgunOperation.TRANSACT),
             abi.encode(_transactData)
         );
-        gatewayEVM.depositAndCall{value: msg.value}(zetachainAdapt, message, revertOptions);
+        gatewayEVM.call(zetachainAdapt, message, revertOptions);
     }
 }
