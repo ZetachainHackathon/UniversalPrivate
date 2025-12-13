@@ -53,8 +53,8 @@ contract ZetachainAdapt is UniversalContract {
 
       railgunSmartWallet.shield(shieldRequests);
     } else if (operation == uint256(RailgunOperation.TRANSACT)) {
-      Transaction[] memory transactions = abi.decode(data, (Transaction[]));
-      (bool success, bytes memory result) = railgunSmartWallet.call(transactions);
+      bytes memory transactionData = abi.decode(data, (bytes));
+      (bool success, bytes memory result) = address(railgunSmartWallet).call(transactionData);
       if (!success) {
         // 返回詳細的錯誤信息
         if (result.length > 0) {
