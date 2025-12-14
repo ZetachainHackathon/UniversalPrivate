@@ -51,39 +51,10 @@ export default function LoginPage() {
     setIsCreating(true);
     setStatusMsg("⏳ 正在創建/匯入錢包...");
     try {
-      // TODO: Context only exposes `create` (which generates new mnemonic).
-      // If we want to support IMPORTING existing mnemonic via Context, we need to add `importWallet` to Provider.
-      // For now, I'll fallback to `create` (if usage is actually creating new).
-      // But looking at UI it says "Import / Create".
-      // If the user inputs mnemonic, it's an import.
-      // Let's assume for now the user wants to Create New if the field is empty, or Import if filled.
-      // Actually `createPrivateWallet` handles import if mnemonic is provided as 2nd arg.
-      // The context `create` function I wrote: `const create = async (password) => { const mnemonic = createMnemonic(); ... }`
-      // It DOES NOT support import currently. I should probably fix Provider first or direct call here but then Context won't have the key?
-      // WAIT: If I direct call `createPrivateWallet` here, the Context won't know about `encryptionKey`.
-      // So I MUST add `importWallet` to Provider or update `create` signature.
-      // Let's stick to `create` for now (generating new) as per the Context implementation I saw earlier.
-      // Or better, I will update Provider to support import shortly.
-
-      // Temporary: Use direct call but then manually login? No, Context state is needed.
-      // I'll assume for this step we are using the existing `create` from context which generates NEW wallet.
-      // If existing mnemonic logic is needed, I'll need to modify Provider.
-      // Given the user constraint, I will prioritize LOGIN functionality first.
-
-      // Let's just use the `create` from context (which generates new mnemonic) for now.
-      // If user provided mnemonic, we might be blocked.
-      // Let's check `transfer-form.tsx` or others... actually `page.tsx` has `importMnemonic`.
-
-      // Since I cannot easily change Provider in this single tool call, I'll use `await create(importPassword)`
-      // and ignore `importMnemonic` for a moment? No that's bad UX.
-      // I will assume for now we are using the `create` for new wallets.
-
-      // Actually, looking at `RailgunProvider.tsx`:
-      // const create = async (password: string) => { ... const mnemonic = createMnemonic(); ... }
-      // It ignores input mnemonic.
-
-      // I will assume the user mainly tests LOGIN for now.
-      const mnemonic = await create(importPassword);
+      // Use create with 2 arguments (password, mnemonic?)
+      // If importMnemonic is present, it will be strictly used (Import)
+      // If empty, a new one will be generated (Create)
+      const mnemonic = await create(importPassword, importMnemonic);
       setStatusMsg("✅ 錢包創建成功！");
       router.push("/cross-chain");
     } catch (error: any) {

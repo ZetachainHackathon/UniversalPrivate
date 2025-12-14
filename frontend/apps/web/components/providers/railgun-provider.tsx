@@ -22,7 +22,7 @@ type RailgunContextType = {
   refresh: () => Promise<void>; // 提供一個手動重新整理的函數
   reset: () => void; // 重置狀態 (切換帳號用)
   login: (password: string) => Promise<void>;
-  create: (password: string) => Promise<string>; // 回傳 mnemonic
+  create: (password: string, mnemonic?: string) => Promise<string>; // 回傳 mnemonic
 };
 
 const RailgunContext = createContext<RailgunContextType>({
@@ -79,10 +79,13 @@ export default function RailgunProvider({
     await BalanceModule.triggerBalanceRefresh(info.id);
   };
 
-  // 創建邏輯
-  const create = async (password: string) => {
+  // 創建/匯入邏輯
+  const create = async (password: string, importMnemonic?: string) => {
     const { createMnemonic, createPrivateWallet } = await import("@/lib/railgun/wallet-actions");
-    const mnemonic = createMnemonic();
+
+    // 如果有傳入助記詞就用傳入的 (Import)，沒有就產生新的 (Create)
+    const mnemonic = importMnemonic ? importMnemonic.trim() : createMnemonic();
+
     const info = await createPrivateWallet(password, mnemonic);
 
     setWalletInfo({ id: info.id, railgunAddress: info.railgunAddress });

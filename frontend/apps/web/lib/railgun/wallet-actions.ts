@@ -14,7 +14,11 @@ import {
 // 👇 引入我們之前寫好的模組
 import { getEncryptionKeyFromPassword, setEncryptionKeyFromPassword } from "./encryption";
 import { CONFIG } from "@/config/env";
+import { createWebDatabase, clearWebDatabase } from './db';
 import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
+
+// 👇 引入 Engine Lifecycle 控制
+import { stopEngine, initializeEngine, loadEngineProvider } from "./wallet";
 
 /**
  * 取得當前網路的起始區塊 (優化掃描速度)
@@ -58,6 +62,21 @@ export const createPrivateWallet = async (
   mnemonic: string
 ): Promise<RailgunWalletInfo> => {
 
+  // 0. 核彈級重置：停止引擎 -> 清除 DB -> 重啟引擎
+  // 這是為了確保 "同助記詞 = 同地址" 的絕對決定性 (Determinism)
+  try {
+    if (typeof window !== 'undefined') {
+      await stopEngine(); // Release DB locks
+      await clearWebDatabase('railgun-web-db'); // Wipe Data
+      await initializeEngine(); // Restart
+      await loadEngineProvider(); // Reconnect Network
+    }
+  } catch (e) {
+    console.warn("重置流程遇到問題 (可能是 Engine 尚未啟動)，嘗試繼續...", e);
+    // 即便失敗也嘗試繼續，也許只是 Engine 沒開
+    try { await initializeEngine(); } catch { }
+  }
+
   // 1. 取得加密金鑰 (假設使用者已經註冊過密碼，或者你可以在這裡呼叫 setEncryptionKey)
   // 如果是全新的流程，這裡應該呼叫 setEncryptionKeyFromPassword
   let encryptionKey: string;
@@ -74,16 +93,27 @@ export const createPrivateWallet = async (
 
   // 3. 呼叫 SDK 創建錢包
   console.log("正在創建 Railgun 錢包...");
+  const formattedMnemonic = mnemonic.trim(); // 去除前後空白，避免複製貼上時多出空格
+
+  // Debug: 檢查助記詞一致性
+  console.log("🔍 Mnemonic Debug:");
+  console.log("   - Original Length:", mnemonic.length);
+  console.log("   - Trimmed Length:", formattedMnemonic.length);
+  console.log("   - First Word:", formattedMnemonic.split(' ')[0]);
+  console.log("   - Last Word:", formattedMnemonic.split(' ').pop());
+
   const railgunWalletInfo = await createRailgunWallet(
     encryptionKey,
-    mnemonic,
-    undefined // creationBlockMap - 使用 undefined 讓 SDK 自動處理 (與 Test Script 一致)
+    formattedMnemonic,
+    creationBlockMap
   );
 
   // 4. 將 Wallet ID 存入 LocalStorage (方便下次自動載入)
   BrowserStorage.set(STORAGE_KEYS.RAILGUN_WALLET_ID, railgunWalletInfo.id);
 
   console.log("✅ 錢包創建成功 ID:", railgunWalletInfo.id);
+  console.log("🔑 Railgun Address:", railgunWalletInfo.railgunAddress); // 讓用戶確認地址一致
+
   return railgunWalletInfo;
 };
 

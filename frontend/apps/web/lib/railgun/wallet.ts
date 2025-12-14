@@ -1,6 +1,7 @@
 import { groth16 } from 'snarkjs';
 import {
   startRailgunEngine,
+  stopRailgunEngine,
   getProver,
   SnarkJSGroth16,
   loadProvider
@@ -73,6 +74,7 @@ const getProviderInfo = (providerUrl: string) => {
     priority: 3,
     weight: 2,
     maxLogsPerBatch: 1,
+    // disablePolling: true, // 如果 RPC 有限制，可以考慮打開
   };
 };
 
@@ -118,4 +120,13 @@ export const loadEngineProvider = async (): Promise<void> => {
     console.error("❌ [Railgun] 網路連接失敗:", error);
     throw error;
   }
+};
+
+/**
+ * 停止 Railgun 引擎
+ */
+export const stopEngine = async (): Promise<void> => {
+  console.log("🛑 正在停止 Railgun Engine...");
+  await stopRailgunEngine();
+  console.log("✅ Engine 已停止");
 };
