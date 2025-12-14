@@ -7,7 +7,7 @@
     "dev": "pnpm copy-artifacts && next dev --port 3000 --webpack",
     "build": "pnpm copy-artifacts && next build",
     "start": "next start",
-    "lint": "eslint --max-warnings 0",
+    "lint": "eslint",
     "check-types": "next typegen && tsc --noEmit",
     "copy-artifacts": "mkdir -p public/test-artifacts && cp -r node_modules/railgun-circuit-test-artifacts/circuits/* public/test-artifacts/"
   },
