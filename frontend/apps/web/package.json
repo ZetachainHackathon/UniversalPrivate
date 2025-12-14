@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm copy-artifacts && next dev --port 3000 --webpack",
-    "build": "pnpm copy-artifacts && next build",
+    "build": "pnpm copy-artifacts && next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "check-types": "next typegen && tsc --noEmit",
