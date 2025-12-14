@@ -19,7 +19,6 @@ interface UseShieldTxProps {
 
 export const useShieldTransaction = () => {
     const [isLoading, setIsLoading] = useState(false);
-    // const [status, setStatus] = useState(""); // Removed in favor of Toast
     const [txHash, setTxHash] = useState("");
 
     const { signer, isConnected, connectWallet, checkNetwork, switchNetwork } = useWallet();
@@ -133,7 +132,6 @@ export const useShieldTransaction = () => {
     return {
         executeShield,
         isLoading,
-        // status, // Removed
         txHash
     };
 };

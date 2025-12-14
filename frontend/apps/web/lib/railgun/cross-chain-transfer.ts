@@ -102,7 +102,7 @@ export const generateUnshieldOutsideChainData = async (
     await engine.scanContractHistory(NETWORK_CONFIG[TEST_NETWORK].chain, undefined);
 
     // Constants
-    const unshieldFeeBasisPoints = 25n;
+    const unshieldFeeBasisPoints = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
     const amountAfterFee = (amount * (10000n - unshieldFeeBasisPoints)) / 10000n;
     const ZERO_ADDRESS = ZeroAddress;
 
@@ -153,7 +153,7 @@ export const generateUnshieldOutsideChainData = async (
     ];
 
     // 3. Estimate Gas
-    const minGasLimit = 1_000_000n;
+    const minGasLimit = CONFIG.GAS.MIN_LIMIT_CROSS_CHAIN;
     const sendWithPublicWallet = true;
 
     const originalGasDetails = await getOriginalGasDetailsForTransaction(
@@ -183,7 +183,7 @@ export const generateUnshieldOutsideChainData = async (
         TEST_NETWORK,
         gasEstimate,
         sendWithPublicWallet,
-        signer as any
+        signer
     );
     const overallBatchMinGasPrice = calculateGasPrice(transactionGasDetails);
 
@@ -242,7 +242,10 @@ export const executeCrossChainTransfer = async (
     // 2. Call EVMAdapt contract
     const evmAdaptContract = new Contract(EVM_ADAPT_ADDRESS, EVM_ADAPT_ABI, signer);
 
-    const CROSS_CHAIN_FEE = 100000000000000n; // 0.0001 ETH
+    // Note: This 0.0001 ETH fee is likely reserved for destination chain gas or relayer fees.
+    // Ensure the ZetaChainAdapt contract or the Unshield logic actually consumes it to avoid lost funds.
+    // If testing reveals ETH is not needed, set this to 0n.
+    const CROSS_CHAIN_FEE = CONFIG.FEES.CROSS_CHAIN;
 
     const tx = await evmAdaptContract.getFunction("unshieldOutsideChain")(unshieldOutsideChainData, {
         value: CROSS_CHAIN_FEE,

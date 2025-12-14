@@ -25,5 +25,12 @@ export const CONFIG = {
             ID_DEC: 7001,
             ID_HEX: "0x1b59",
         }
+    },
+    FEES: {
+        CROSS_CHAIN: 100000000000000n, // 0.0001 ETH
+        UNSHIELD_BASIS_POINTS: 25n,
+    },
+    GAS: {
+        MIN_LIMIT_CROSS_CHAIN: 1_000_000n,
     }
 } as const;

@@ -65,7 +65,7 @@ export const executeTransfer = async (
         TEST_NETWORK,
         gasEstimate,
         sendWithPublicWallet,
-        signer as any
+        signer
     );
     const overallBatchMinGasPrice = calculateGasPrice(transactionGasDetails);
 

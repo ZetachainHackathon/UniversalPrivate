@@ -19,7 +19,6 @@ interface UseTransferTxProps {
 
 export const useTransferTransaction = () => {
     const [isLoading, setIsLoading] = useState(false);
-    // const [status, setStatus] = useState("");
     const [txHash, setTxHash] = useState("");
 
     const { signer, isConnected, connectWallet, checkNetwork, switchNetwork } = useWallet();
@@ -105,9 +104,9 @@ export const useTransferTransaction = () => {
                     signer
                 );
 
-                // setTxHash(tx.hash);
+                setTxHash(tx.hash);
             }
-            toast.success("交易成功 (模擬/實作中)", { id: toastId });
+            toast.success("交易已送出", { id: toastId });
         } catch (error: any) {
             console.error(error);
             toast.error("交易失敗: " + (error.reason || error.message), { id: toastId });
@@ -119,7 +118,6 @@ export const useTransferTransaction = () => {
     return {
         executeTransfer,
         isLoading,
-        // status,
         txHash
     };
 };
