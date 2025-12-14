@@ -108,6 +108,26 @@ export default function CrossChainPage() {
   };
 
 
+  // 創建錢包
+  const handleCreateWallet = async () => {
+    if (!password) return alert("請輸入密碼以保護新錢包");
+    try {
+      const { createMnemonic, createPrivateWallet } = await import("@/lib/railgun/wallet-actions");
+      const mnemonic = createMnemonic();
+      const walletInfo = await createPrivateWallet(password, mnemonic);
+
+      alert("✅ 錢包創建成功！\n\n請務必備份助記詞：\n" + mnemonic);
+
+      setRailgunAddress(walletInfo.railgunAddress);
+      setWalletId(walletInfo.id);
+
+      const { triggerBalanceRefresh } = await import("@/lib/railgun/balance");
+      await triggerBalanceRefresh(walletInfo.id);
+    } catch (e: any) {
+      alert("創建失敗: " + e.message);
+    }
+  };
+
   // 複製功能
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -171,6 +191,7 @@ export default function CrossChainPage() {
         password={password}
         setPassword={setPassword}
         handleLoadWallet={handleLoadWallet}
+        handleCreateWallet={handleCreateWallet}
         isConnected={isConnected}
         address={address}
         connectWallet={connectWallet}

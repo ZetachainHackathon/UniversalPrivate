@@ -7,9 +7,11 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "patch-package": "^8.0.1",
     "prettier": "^3.6.2",
     "turbo": "^2.6.3",

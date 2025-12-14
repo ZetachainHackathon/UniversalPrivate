@@ -5,7 +5,8 @@ interface HeaderProps {
     railgunAddress: string;
     password: string;
     setPassword: (password: string) => void;
-    handleLoadWallet: () => void;
+    handleLoadWallet: () => Promise<void>;
+    handleCreateWallet: () => Promise<void>;
     isConnected: boolean;
     address: string | null;
     connectWallet: () => void;
@@ -18,6 +19,7 @@ export function CrossChainHeader({
     password,
     setPassword,
     handleLoadWallet,
+    handleCreateWallet,
     isConnected,
     address,
     connectWallet,
@@ -79,6 +81,13 @@ export function CrossChainHeader({
                             className="h-8 text-xs border-2 border-black bg-black text-white disabled:opacity-50"
                         >
                             {isRailgunReady ? "解鎖" : "..."}
+                        </Button>
+                        <Button
+                            onClick={handleCreateWallet}
+                            disabled={!isRailgunReady}
+                            className="h-8 text-xs border-2 border-black bg-white text-black hover:bg-gray-100 disabled:opacity-50"
+                        >
+                            Create
                         </Button>
                     </div>
                 )}

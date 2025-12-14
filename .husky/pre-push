@@ -1,0 +1,16 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🐶 Husky: Running pre-push checks..."
+
+cd frontend
+
+# 1. Run Lint
+echo "Running Lint..."
+pnpm lint --filter=web || { echo "❌ Lint failed"; exit 1; }
+
+# 2. Run Unit Tests
+echo "Running Unit Tests (Vitest)..."
+pnpm --filter=web exec vitest run || { echo "❌ Unit Tests failed"; exit 1; }
+
+echo "✅ All checks passed. Pushing..."
