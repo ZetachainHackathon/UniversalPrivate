@@ -1,0 +1,30 @@
+Refactor: 前端架構重構與錯誤修復
+
+## 1. 關鍵錯誤修復 (Critical Bug Fixes)
+### 網路設定不匹配 (Network Configuration Mismatch)
+- **問題描述**: 執行餘額掃描 (`refreshBalances`) 時，發生 `TypeError: Cannot read properties of undefined (reading 'chain')` 錯誤。
+- **根本原因**: `apps/web/config/env.ts` 中的設定將網路名稱預設為字串 `"ZetaChain Athens"`。然而，Railgun SDK 的 `NETWORK_CONFIG` 物件是使用特定的 Enum 值作為 Key。經檢查 `node_modules`，預期的 Key 實際上是 `NetworkName.ZetachainTestnet` (對應字串值為 `"Zetachain_Testnet"`)。
+- **解決方案**: 更新 `env.ts`，直接從 `@railgun-community/shared-models` 引入 `NetworkName`，並將預設值修改為 `NetworkName.ZetachainTestnet`。這確保了設定與 SDK 的型別系統嚴格對齊，避免未來發生類似錯誤。
+
+## 2. 架構重構 (Architecture Refactoring)
+### 提取自定義 Hook (`useRailgunEngine`)
+- **變更**: 將原本混雜在 `RailgunProvider` 中的複雜邏輯（包括引擎初始化、網路連接、事件監聽）提取到獨立的 `hooks/use-railgun-engine.ts` 中。
+- **效益**:
+    - **職責分離**: Provider 現在專注於 Context 的提供，而 Engine 的生命週期由 Hook 專門管理。
+    - **安全性**: 該 Hook 實作了 `isMounted` 檢查，有效防止了 React `useEffect` 中非同步操作常見的 Memory Leak (記憶體洩漏) 以及在元件卸載後更新狀態的問題。
+
+### 統一儲存層 (`lib/storage.ts`)
+- **變更**: 創建了 `BrowserStorage` adapter 來取代直接呼叫 `localStorage`。
+- **效益**:
+    - **SSR 相容性**: 所有存取操作都加入了 `typeof window !== 'undefined'` 的檢查，防止在 Next.js 伺服器端渲染時崩潰。
+    - **可維護性**: 所有的 Storage Key 都定義在 `STORAGE_KEYS` 常數中，消除了 "Magic Strings"，防止因打錯字 (例如 `railgun_wallet_id`) 導致的 Bug。
+- **應用範圍**: `wallet-actions.ts`、`encryption.ts` 和 `railgun-provider.tsx` 皆已更新使用此新 adapter。
+
+### 代碼清理 (Code Cleanup)
+- **狀態管理**: 移除了 `balance.ts` 中的全域可變變數 `balanceCache`。現在狀態是純響應式的 (Reactive)，資料流向為：Railgun Engine 事件 -> Custom Hook -> Context -> UI。
+- **邏輯重構**: 在 `wallet-actions.ts` 中，將重複的 "Creation Block Map" 建立邏輯提取為更乾淨的 helper function `getCreationBlockMap`。
+
+## 3. 當前系統狀態
+- **型別安全**: 已透過 Global Types 增強，並移除了潛在危險的型別強制轉型。
+- **設定管理**: 已在 `env.ts` 中集中管理且具備型別檢查。
+- **可維護性**: 高。核心邏輯已模組化為 Hooks 和 Helper Libraries。
