@@ -10,6 +10,13 @@
 - ✅ Tailwind CSS
 - ✅ PostCSS
 - ✅ Autoprefixer
+- ✅ shadcn/ui 核心依赖:
+  - `@radix-ui/react-slot`
+  - `class-variance-authority`
+  - `clsx`
+  - `tailwind-merge`
+  - `tailwindcss-animate`
+  - `lucide-react`
 
 #### UI Package (`frontend/packages/ui`)
 - ✅ Tailwind CSS
