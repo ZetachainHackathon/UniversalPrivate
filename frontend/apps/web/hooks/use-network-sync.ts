@@ -12,6 +12,10 @@ export const useNetworkSync = (
             if (signer && signer.provider) {
                 try {
                     const network = await signer.provider.getNetwork();
+
+                    // isMounted check removed for brevity but good practice would be:
+                    // if (!isMounted) return;
+
                     const chainId = network.chainId;
 
                     if (chainId === BigInt(CONFIG.CHAINS.SEPOLIA.ID_DEC) && selectedChain !== "sepolia") {

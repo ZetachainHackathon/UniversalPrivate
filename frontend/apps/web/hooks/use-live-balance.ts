@@ -38,7 +38,18 @@ export const useLiveBalance = (
     }, [signer, address, tokenAddress, selectedChain]);
 
     useEffect(() => {
-        fetchBalance();
+        let mounted = true;
+
+        const load = async () => {
+            if (!mounted) return;
+            await fetchBalance();
+        };
+
+        load();
+
+        return () => {
+            mounted = false;
+        };
     }, [fetchBalance]);
 
     return { balance, loading, refetch: fetchBalance };
