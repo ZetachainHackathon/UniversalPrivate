@@ -37,13 +37,13 @@ import { TEST_NETWORK } from "@/constants";
 // Constants from test/unshield.ts
 const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH
 const TARGET_ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // Target Chain Token
-const ZETACHAIN_ADAPT_ADDRESS = "0xa69D6437F95C116eF70BCaf3696b186DFF6aCD49";
-const EVM_ADAPT_ADDRESS = "0xbC3Da3B1890ED501F0d357b12BB834810c34d71E"; // Sepolia EVMAdapt
+const ZETACHAIN_ADAPT_ADDRESS = "0xFaf96D14d74Ee9030d89d5FD2eB479340F32843E";
+const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // Sepolia EVMAdapt
 
 // ABIs
 const ZRC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
 const ZETACHAIN_ADAPT_ABI = [
-    "function withdraw(bytes receiver, uint256 amount, address zrc20, address targetZrc20, uint256 gasLimit, tuple(address revertAddress, bool callOnRevert, address abortAddress, bytes revertMessage, uint256 onRevertGasLimit) revertOptions) external",
+     "function withdraw(bytes receiver, uint256 amount, address zrc20, address targetZrc20, tuple(address revertAddress, bool callOnRevert, address abortAddress, bytes revertMessage, uint256 onRevertGasLimit) revertOptions) external",
 ];
 const EVM_ADAPT_ABI = [
     "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable",
@@ -138,11 +138,10 @@ export const generateUnshieldOutsideChainData = async (
         signer.provider
     ) as any;
     const withdrawData = await zetachainAdaptContract.withdraw.populateTransaction(
-        getBytes(recipientAddress), // bytes receiver
+        recipientAddress, // bytes receiver
         amountAfterFee,
         ZRC20_ADDRESS,
         TARGET_ZRC20_ADDRESS,
-        GAS_LIMIT,
         {
             revertAddress: ZERO_ADDRESS,
             callOnRevert: false,

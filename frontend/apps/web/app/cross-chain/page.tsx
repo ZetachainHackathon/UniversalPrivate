@@ -16,7 +16,7 @@ import { TEST_NETWORK } from "@/constants";
 import { NETWORK_CONFIG, NetworkName } from "@railgun-community/shared-models";
 
 // 預設值 (Sepolia)
-const DEFAULT_ADAPT_ADDRESS = "0xbC3Da3B1890ED501F0d357b12BB834810c34d71E"; 
+const DEFAULT_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; 
 const DEFAULT_TOKEN_ADDRESS = ZeroAddress; // 預設使用原生代幣 (ETH)
 
 const SEPOLIA_CHAIN_ID_DEC = 11155111n;
