@@ -2,5 +2,6 @@
     "framework": "nextjs",
     "buildCommand": "cd apps/web && pnpm build",
     "installCommand": "pnpm install",
+    "outputDirectory": "apps/web/.next",
     "ignoreCommand": "npx turbo-ignore"
 }
