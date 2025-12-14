@@ -9,6 +9,8 @@ interface HeaderProps {
     isConnected: boolean;
     address: string | null;
     connectWallet: () => void;
+    handleHardReset: () => void;
+    isRailgunReady: boolean;
 }
 
 export function CrossChainHeader({
@@ -19,6 +21,8 @@ export function CrossChainHeader({
     isConnected,
     address,
     connectWallet,
+    handleHardReset,
+    isRailgunReady,
 }: HeaderProps) {
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
@@ -52,21 +56,29 @@ export function CrossChainHeader({
                         >
                             Export Seed/助記詞
                         </button>
+                        <button
+                            onClick={handleHardReset}
+                            className="text-xs text-red-500 underline mt-1 ml-1 hover:text-red-700 text-left font-bold"
+                        >
+                            Reset Cache/重置快取
+                        </button>
                     </div>
                 ) : (
                     <div className="flex gap-2">
                         <input
                             type="password"
-                            placeholder="輸入密碼解鎖 0zk"
-                            className="border-2 border-black rounded px-2 py-1 text-sm"
+                            placeholder={isRailgunReady ? "輸入密碼解鎖 0zk" : "初始化中..."}
+                            className="border-2 border-black rounded px-2 py-1 text-sm disabled:bg-gray-100"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            disabled={!isRailgunReady}
                         />
                         <Button
                             onClick={handleLoadWallet}
-                            className="h-8 text-xs border-2 border-black bg-black text-white"
+                            disabled={!isRailgunReady}
+                            className="h-8 text-xs border-2 border-black bg-black text-white disabled:opacity-50"
                         >
-                            解鎖
+                            {isRailgunReady ? "解鎖" : "..."}
                         </Button>
                     </div>
                 )}

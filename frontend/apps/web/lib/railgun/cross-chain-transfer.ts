@@ -4,7 +4,6 @@ import {
     type Wallet,
     ZeroAddress,
     parseUnits,
-    getBytes,
     ContractTransaction,
 } from "ethers";
 import {
@@ -31,37 +30,24 @@ import {
     getOriginalGasDetailsForTransaction,
 } from "./transaction-utils";
 import { TEST_NETWORK } from "@/constants";
-// import { overrideArtifact } from "@railgun-community/wallet";
-// import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
+import { CONFIG } from "@/config/env";
 
-// Constants from test/unshield.ts
-const ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // ZETACHAIN ETH
-const TARGET_ZRC20_ADDRESS = "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0"; // Target Chain Token
-const ZETACHAIN_ADAPT_ADDRESS = "0xFaf96D14d74Ee9030d89d5FD2eB479340F32843E";
-const EVM_ADAPT_ADDRESS = "0xc32AfcB92B92886ca08d288280127d5F1A535AaF"; // Sepolia EVMAdapt
+// Contract Addresses
+const {
+    ZRC20_ETH,
+    TARGET_ZRC20,
+    ZETACHAIN_ADAPT,
+    DEFAULT_ADAPT: EVM_ADAPT_ADDRESS
+} = CONFIG.CONTRACTS;
 
 // ABIs
 const ZRC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
 const ZETACHAIN_ADAPT_ABI = [
-     "function withdraw(bytes receiver, uint256 amount, address zrc20, address targetZrc20, tuple(address revertAddress, bool callOnRevert, address abortAddress, bytes revertMessage, uint256 onRevertGasLimit) revertOptions) external",
+    "function withdraw(bytes receiver, uint256 amount, address zrc20, address targetZrc20, tuple(address revertAddress, bool callOnRevert, address abortAddress, bytes revertMessage, uint256 onRevertGasLimit) revertOptions) external",
 ];
 const EVM_ADAPT_ABI = [
     "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable",
 ];
-
-// const setupZetachainOverrides = () => {
-//   // Override Artifacts
-//   const artifacts = listArtifacts();
-//   for (const artifactConfig of artifacts) {
-//     const artifact = getArtifact(artifactConfig.nullifiers, artifactConfig.commitments);
-//     const variant = `${artifactConfig.nullifiers}x${artifactConfig.commitments}`;
-//     overrideArtifact(variant, {
-//       ...artifact,
-//       dat: undefined
-//     });
-//   }
-//   console.log("Overridden artifacts with test artifacts");
-// }
 
 export const crossContractGenerateProof = async (
     encryptionKey: string,
@@ -80,11 +66,10 @@ export const crossContractGenerateProof = async (
         | undefined = undefined
 ) => {
     const progressCallback = (progress: number) => {
-        // Handle proof progress (show in UI).
-        // Proofs can take 20-30 seconds on slower devices.
-        console.log("CrossContract Call Proof progress: ", progress);
+        // Optional: Dispatch logging event or use a proper logger
+        // console.log("CrossContract Call Proof progress: ", progress);
     };
-    // GENERATES RAILGUN SPENDING PROOF
+
     await generateCrossContractCallsProof(
         TXIDVersion.V2_PoseidonMerkle,
         network,
@@ -111,37 +96,35 @@ export const generateUnshieldOutsideChainData = async (
     signer: JsonRpcSigner | Wallet
 ) => {
     const encryptionKey = await getEncryptionKeyFromPassword(password);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const engine = getEngine();
-    console.log("Syncing engine...");
+
+    // 0. Sync Engine
     await engine.scanContractHistory(NETWORK_CONFIG[TEST_NETWORK].chain, undefined);
-    console.log("Engine synced.");
 
     // Constants
-    const GAS_LIMIT = 500000n;
     const unshieldFeeBasisPoints = 25n;
     const amountAfterFee = (amount * (10000n - unshieldFeeBasisPoints)) / 10000n;
     const ZERO_ADDRESS = ZeroAddress;
 
     // 1. Prepare Cross-Contract Calls
     // A. Transfer ZRC20 to ZetachainAdapt
-    const zrc20 = new Contract(ZRC20_ADDRESS, ZRC20_ABI, signer.provider) as any;
+    const zrc20 = new Contract(ZRC20_ETH, ZRC20_ABI, signer.provider) as any;
     const transferData = await zrc20.transfer.populateTransaction(
-        ZETACHAIN_ADAPT_ADDRESS,
+        ZETACHAIN_ADAPT,
         amountAfterFee
     );
 
     // B. Call withdraw on ZetachainAdapt
     const zetachainAdaptContract = new Contract(
-        ZETACHAIN_ADAPT_ADDRESS,
+        ZETACHAIN_ADAPT,
         ZETACHAIN_ADAPT_ABI,
         signer.provider
     ) as any;
     const withdrawData = await zetachainAdaptContract.withdraw.populateTransaction(
         recipientAddress, // bytes receiver
         amountAfterFee,
-        ZRC20_ADDRESS,
-        TARGET_ZRC20_ADDRESS,
+        ZRC20_ETH,
+        TARGET_ZRC20,
         {
             revertAddress: ZERO_ADDRESS,
             callOnRevert: false,
@@ -166,7 +149,7 @@ export const generateUnshieldOutsideChainData = async (
 
     // 2. Prepare Unshield Amounts
     const erc20AmountUnshieldAmounts: RailgunERC20Amount[] = [
-        serializeERC20RelayAdaptUnshield(ZRC20_ADDRESS, amount),
+        serializeERC20RelayAdaptUnshield(ZRC20_ETH, amount),
     ];
 
     // 3. Estimate Gas
@@ -179,7 +162,6 @@ export const generateUnshieldOutsideChainData = async (
         signer
     );
 
-    console.log("⏳ Estimating Gas for Cross-Chain Transfer...");
     const { gasEstimate } = await gasEstimateForUnprovenCrossContractCalls(
         TXIDVersion.V2_PoseidonMerkle,
         TEST_NETWORK,
@@ -195,7 +177,6 @@ export const generateUnshieldOutsideChainData = async (
         sendWithPublicWallet,
         minGasLimit
     );
-    console.log("✅ Gas Estimate:", gasEstimate);
 
     // 4. Get Gas Details & Calculate Price
     const transactionGasDetails = await getGasDetailsForTransaction(
@@ -206,11 +187,7 @@ export const generateUnshieldOutsideChainData = async (
     );
     const overallBatchMinGasPrice = calculateGasPrice(transactionGasDetails);
 
-    // setupZetachainOverrides();
     // 5. Generate Proof
-
-    // generate proof
-    console.log("⏳ Generating Proof...");
     await crossContractGenerateProof(
         encryptionKey,
         TEST_NETWORK,
@@ -224,7 +201,6 @@ export const generateUnshieldOutsideChainData = async (
         minGasLimit,
         true
     );
-    console.log("✅ Proof Generated");
 
     // 6. Populate Transaction
     const transaction = await populateProvedCrossContractCalls(
@@ -248,16 +224,11 @@ export const generateUnshieldOutsideChainData = async (
 export const executeCrossChainTransfer = async (
     password: string,
     railgunWalletId: string,
-    amount: string, // User input string (e.g. "0.01")
+    amount: string,
     recipientAddress: string,
     signer: JsonRpcSigner | Wallet
 ) => {
-    // Convert amount to BigInt (Assuming 18 decimals for now as per test)
     const amountBigInt = parseUnits(amount, 18);
-
-    console.log("🚀 Starting Cross-Chain Transfer...");
-    console.log("Amount:", amount);
-    console.log("Recipient:", recipientAddress);
 
     // 1. Generate the data payload
     const unshieldOutsideChainData = await generateUnshieldOutsideChainData(
@@ -271,15 +242,11 @@ export const executeCrossChainTransfer = async (
     // 2. Call EVMAdapt contract
     const evmAdaptContract = new Contract(EVM_ADAPT_ADDRESS, EVM_ADAPT_ABI, signer);
 
-    // Note: The test sends 100000000000000n value (0.0001 ETH) as cross-chain fee?
-    // In test/unshield.ts: { value: 100000000000000n }
-    const CROSS_CHAIN_FEE = 100000000000000n;
+    const CROSS_CHAIN_FEE = 100000000000000n; // 0.0001 ETH
 
-    console.log("⏳ Sending Transaction to EVMAdapt...");
     const tx = await evmAdaptContract.getFunction("unshieldOutsideChain")(unshieldOutsideChainData, {
         value: CROSS_CHAIN_FEE,
     });
 
-    console.log("✅ Transaction Sent:", tx.hash);
     return tx;
 };

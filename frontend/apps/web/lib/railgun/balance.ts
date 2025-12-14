@@ -1,23 +1,15 @@
-// apps/web/lib/railgun/balance.ts
-
 import {
   setOnUTXOMerkletreeScanCallback,
   setOnTXIDMerkletreeScanCallback,
   setOnBalanceUpdateCallback,
   refreshBalances,
-  getEngine
 } from "@railgun-community/wallet";
 import {
   MerkletreeScanUpdateEvent,
   NETWORK_CONFIG,
   RailgunBalancesEvent,
-  RailgunWalletBalanceBucket,
 } from "@railgun-community/shared-models";
 import { CONFIG } from "@/config/env";
-
-// 定義 Cache (用於儲存最新的餘額狀態)
-// 定義 Cache (用於儲存最新的餘額狀態) - 移至 Provider 內部管理
-// export const balanceCache = new Map<...>(); 
 
 /**
  * 設定餘額掃描的監聽器 (Callbacks)
@@ -30,14 +22,12 @@ export const setupBalanceListeners = (
 ) => {
   // 1. 監聽 UTXO 掃描進度
   const utxoListener = (event: MerkletreeScanUpdateEvent) => {
-    // console.log("UTXO Scan:", event.progress);
     onScanUpdate(event.progress);
   };
   setOnUTXOMerkletreeScanCallback(utxoListener);
 
   // 2. 監聽 TXID 掃描進度
   const txidListener = (event: MerkletreeScanUpdateEvent) => {
-    // console.log("TXID Scan:", event.progress);
     onScanUpdate(event.progress);
   };
   setOnTXIDMerkletreeScanCallback(txidListener);
@@ -45,15 +35,12 @@ export const setupBalanceListeners = (
   // 3. 監聽餘額更新
   const balanceListener = (balanceEvent: RailgunBalancesEvent) => {
     console.log("💰 餘額更新:", balanceEvent);
-    // 通知前端
     onBalanceUpdate(balanceEvent);
   };
   setOnBalanceUpdateCallback(balanceListener);
 
   // 回傳 cleanup function
   return () => {
-    // 這裡 SDK 目前沒有直接的 removeCallback 方法，但我們可以傳入空函數來"取消"監聽
-    // 或者不做任何事，但最好在架構上保留 cleanup 的接口
     setOnUTXOMerkletreeScanCallback(() => { });
     setOnTXIDMerkletreeScanCallback(() => { });
     setOnBalanceUpdateCallback(() => { });
@@ -70,11 +57,6 @@ export const triggerBalanceRefresh = async (walletId: string) => {
   console.log("🔄 開始掃描餘額...", chain);
 
   try {
-    // 0. 確保 Merkle Tree 同步 (與 Test Script 一致)
-    // Test Script: await getEngine().scanContractHistory(chain, undefined);
-    console.log("🌳 同步 Merkle Tree...");
-    //await getEngine().scanContractHistory(chain, undefined);
-
     // 這是一個 Promise，當掃描全部完成後才會 resolve
     await refreshBalances(chain, [walletId]);
     console.log("✅ 掃描完成！");
@@ -86,20 +68,14 @@ export const triggerBalanceRefresh = async (walletId: string) => {
 
 /**
  * 🔥 完整掃描 (Full Rescan)
- * 由於 SDK 限制，這裡我們同樣使用 refreshBalances，
- * 但我們先清空本地 Cache，讓 UI 有「重新抓取」的感覺。
  */
 export const triggerFullRescan = async (walletId: string) => {
   // @ts-ignore
   const chain = NETWORK_CONFIG[CONFIG.NETWORK.NAME].chain;
   console.log("⚠️ 執行強制掃描 (Full Rescan)...", chain);
 
-  // 1. 清空本地 Cache (前端 UI 負責)
-  // balanceCache.clear();
-
   try {
-    // 2. 再次呼叫 refreshBalances (它是目前最穩定的掃描 API)
-    // Railgun Engine 內部會自動判斷是否需要下載新的 Merkle Tree
+    // 再次呼叫 refreshBalances (它是目前最穩定的掃描 API)
     await refreshBalances(chain, [walletId]);
     console.log("✅ 強制掃描結束");
   } catch (error) {
@@ -109,38 +85,25 @@ export const triggerFullRescan = async (walletId: string) => {
 };
 
 /**
- * 取得目前 Cache 中的可花費餘額 (Spendable)
- */
-// export const getSpendableBalances = () => {
-//   return balanceCache.get(RailgunWalletBalanceBucket.Spendable);
-// };
-
-/**
  * 🔥 核彈級重置 (Hard Reset)
  * 刪除本地資料庫，強制 Engine 遺忘歷史，從頭掃描。
- * 這會導致網頁重新整理。
+ * 回傳 Promise，由調用者決定是否重新整理頁面。
  */
-export const clearRailgunStorage = async () => {
+export const clearRailgunStorage = async (): Promise<void> => {
   console.warn("⚠️ 正在刪除 Railgun 本地資料庫...");
-
-  // 1. 嘗試關閉連線 (非必要，但良好習慣)
-  // 如果有 stopRailgunEngine 之類的可以呼叫，但直接刪 DB 最快
-
-  // 2. 刪除 IndexedDB
-  // Railgun 預設的 DB 名稱通常是 "railgun-web-db" (看你的 log 確認的)
   const dbName = "railgun-web-db";
 
-  const req = window.indexedDB.deleteDatabase(dbName);
+  return new Promise((resolve, reject) => {
+    const req = window.indexedDB.deleteDatabase(dbName);
 
-  req.onsuccess = () => {
-    console.log("✅ 資料庫刪除成功！");
-    alert("快取已清除！網頁將重新整理以開始完整掃描。");
-    // 3. 強制重整，讓 Engine 重啟並重建 DB
-    window.location.reload();
-  };
+    req.onsuccess = () => {
+      console.log("✅ 資料庫刪除成功！");
+      resolve();
+    };
 
-  req.onerror = () => {
-    console.error("❌ 無法刪除資料庫");
-    alert("清除失敗，請手動清除瀏覽器快取。");
-  };
+    req.onerror = () => {
+      console.error("❌ 無法刪除資料庫");
+      reject(new Error("無法刪除資料庫"));
+    };
+  });
 };

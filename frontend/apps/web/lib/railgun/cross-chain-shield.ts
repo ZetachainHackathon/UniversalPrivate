@@ -1,5 +1,3 @@
-// apps/web/lib/railgun/cross-chain-shield.ts
-
 import { Contract, type Wallet, type JsonRpcSigner, ZeroAddress } from "ethers";
 import { ByteUtils } from "@railgun-community/engine";
 
@@ -8,9 +6,9 @@ import {
     generateERC20ShieldRequests,
     serializeERC20Transfer,
 } from "./transaction-utils";
-import { TEST_TOKEN } from "@/constants";
+import { CONFIG } from "@/config/env";
 
-// EVMAdapt 合約 ABI
+// EVMAdapt 合約 ABI (使用更簡潔的 Human-Readable ABI)
 const EVM_ADAPT_ABI = [
     {
         name: "shieldOnZetachain",
@@ -68,11 +66,9 @@ export const executeCrossChainShield = async (
     evmAdaptAddress: string,
     tokenAddress: string,
     amount: bigint,
-    signer: JsonRpcSigner | Wallet, // 👈 這裡接收 MetaMask Signer
-    shouldUseNativeAsset: boolean = false // 👈 新增參數：是否強制使用原生代幣支付
+    signer: JsonRpcSigner | Wallet,
+    shouldUseNativeAsset: boolean = false
 ) => {
-    console.log("🚀 開始準備跨鏈 Shield...");
-
     // 0. 檢查 Signer
     if (!signer) throw new Error("缺少 Signer，無法簽署交易");
 
@@ -82,25 +78,22 @@ export const executeCrossChainShield = async (
     let valueToSend = 0n;
 
     // 決定 Shield Request 中要使用的 Token Address
-    // 如果是 Native Token (ZeroAddress)，在 Shield Request 中必須填入目標鏈上的 ZRC20 地址 (TEST_TOKEN)
-    const shieldTokenAddress = (tokenAddress === ZeroAddress) ? TEST_TOKEN : tokenAddress;
+    // 如果是 Native Token (ZeroAddress)，在 Shield Request 中必須填入目標鏈上的 ZRC20 地址
+    const shieldTokenAddress = (tokenAddress === ZeroAddress) ? CONFIG.CONTRACTS.TEST_ERC20 : tokenAddress;
 
     if (isNativePay) {
-        console.log("ETH 模式: 使用原生代幣支付 (跳過 Approve)。");
+        // ETH 模式
         valueToSend = amount;
     } else {
-        console.log("ERC20 模式: 檢查 Allowance...");
+        // ERC20 模式
         const erc20 = new Contract(tokenAddress, ERC20_ABI, signer) as any;
         const ownerAddress = await signer.getAddress();
         const currentAllowance = await erc20.allowance(ownerAddress, evmAdaptAddress);
-        
+
         if (currentAllowance < amount) {
             console.log(`Allowance 不足 (${currentAllowance} < ${amount})，執行 Approve...`);
             const approveTx = await erc20.approve(evmAdaptAddress, amount);
             await approveTx.wait();
-            console.log("✅ Approve 完成");
-        } else {
-            console.log("✅ Allowance 足夠，跳過 Approve");
         }
         valueToSend = 0n;
     }
@@ -120,8 +113,6 @@ export const executeCrossChainShield = async (
         [shieldRequests],
         { value: valueToSend }
     );
-
-    console.log(`✅ 交易已廣播: ${tx.hash}`);
 
     return tx;
 };

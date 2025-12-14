@@ -19,8 +19,8 @@ export function useRailgunEngine() {
                 if (!isMounted) return;
 
                 // 1. 啟動引擎
-                const engineSuccess = await WalletModule.initializeEngine();
-                if (!engineSuccess || !isMounted) return;
+                await WalletModule.initializeEngine();
+                if (!isMounted) return;
 
                 // 2. 設定監聽器
                 cleanupListeners = BalanceModule.setupBalanceListeners(
@@ -33,8 +33,9 @@ export function useRailgunEngine() {
                 );
 
                 // 3. 連接網路
-                const networkSuccess = await WalletModule.loadEngineProvider();
-                if (networkSuccess && isMounted) {
+                await WalletModule.loadEngineProvider();
+
+                if (isMounted) {
                     setIsReady(true);
                 }
 

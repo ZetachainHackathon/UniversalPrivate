@@ -25,7 +25,7 @@ const DEFAULT_TOKEN_ADDRESS = ZeroAddress; // 預設使用原生代幣 (ETH)
 export default function CrossChainPage() {
   // 從 Context 取得 signer 和 address
   const { isConnected, signer, address, checkNetwork, connectWallet, switchNetwork } = useWallet();
-  const { balances, scanProgress, reset } = useRailgun();
+  const { balances, scanProgress, reset, isReady } = useRailgun();
 
   // State
   const [password, setPassword] = useState("");
@@ -114,6 +114,22 @@ export default function CrossChainPage() {
     alert(`${label} 已複製！`);
   };
 
+  // 清除快取 (Hard Reset)
+  const handleHardReset = async () => {
+    if (!confirm("⚠️ 警告：這將清除應用程式的本地資料庫並重新整理頁面。\n\n如果你的錢包餘額顯示不正確，這通常可以解決問題。確定要繼續嗎？")) {
+      return;
+    }
+
+    try {
+      const { clearRailgunStorage } = await import("@/lib/railgun/balance");
+      await clearRailgunStorage();
+      alert("✅ 快取已清除！即將重新整理...");
+      window.location.reload();
+    } catch (e: any) {
+      alert("❌ 清除失敗: " + e.message);
+    }
+  };
+
   // 執行 Shield (入金)
   const handleShield = async () => {
     await executeShield({
@@ -158,6 +174,8 @@ export default function CrossChainPage() {
         isConnected={isConnected}
         address={address}
         connectWallet={connectWallet}
+        handleHardReset={handleHardReset}
+        isRailgunReady={isReady}
       />
 
       {/* Main Content */}
