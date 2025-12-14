@@ -13,13 +13,11 @@ import {
   RailgunBalancesEvent,
   RailgunWalletBalanceBucket,
 } from "@railgun-community/shared-models";
-import { TEST_NETWORK } from "@/constants";
+import { CONFIG } from "@/config/env";
 
 // 定義 Cache (用於儲存最新的餘額狀態)
-export const balanceCache = new Map<
-  RailgunWalletBalanceBucket,
-  RailgunBalancesEvent
->();
+// 定義 Cache (用於儲存最新的餘額狀態) - 移至 Provider 內部管理
+// export const balanceCache = new Map<...>(); 
 
 /**
  * 設定餘額掃描的監聽器 (Callbacks)
@@ -31,27 +29,35 @@ export const setupBalanceListeners = (
   onBalanceUpdate: (balanceEvent: RailgunBalancesEvent) => void
 ) => {
   // 1. 監聽 UTXO 掃描進度
-  setOnUTXOMerkletreeScanCallback((event: MerkletreeScanUpdateEvent) => {
+  const utxoListener = (event: MerkletreeScanUpdateEvent) => {
     // console.log("UTXO Scan:", event.progress);
     onScanUpdate(event.progress);
-  });
+  };
+  setOnUTXOMerkletreeScanCallback(utxoListener);
 
   // 2. 監聽 TXID 掃描進度
-  setOnTXIDMerkletreeScanCallback((event: MerkletreeScanUpdateEvent) => {
+  const txidListener = (event: MerkletreeScanUpdateEvent) => {
     // console.log("TXID Scan:", event.progress);
     onScanUpdate(event.progress);
-  });
+  };
+  setOnTXIDMerkletreeScanCallback(txidListener);
 
   // 3. 監聽餘額更新
-  setOnBalanceUpdateCallback((balanceEvent: RailgunBalancesEvent) => {
+  const balanceListener = (balanceEvent: RailgunBalancesEvent) => {
     console.log("💰 餘額更新:", balanceEvent);
-    
-    // 更新本地 Cache
-    balanceCache.set(balanceEvent.balanceBucket, balanceEvent);
-    
     // 通知前端
     onBalanceUpdate(balanceEvent);
-  });
+  };
+  setOnBalanceUpdateCallback(balanceListener);
+
+  // 回傳 cleanup function
+  return () => {
+    // 這裡 SDK 目前沒有直接的 removeCallback 方法，但我們可以傳入空函數來"取消"監聽
+    // 或者不做任何事，但最好在架構上保留 cleanup 的接口
+    setOnUTXOMerkletreeScanCallback(() => { });
+    setOnTXIDMerkletreeScanCallback(() => { });
+    setOnBalanceUpdateCallback(() => { });
+  };
 };
 
 /**
@@ -59,9 +65,10 @@ export const setupBalanceListeners = (
  * @param walletId 要掃描的錢包 ID
  */
 export const triggerBalanceRefresh = async (walletId: string) => {
-  const chain = NETWORK_CONFIG[TEST_NETWORK].chain;
+  // @ts-ignore
+  const chain = NETWORK_CONFIG[CONFIG.NETWORK.NAME].chain;
   console.log("🔄 開始掃描餘額...", chain);
-  
+
   try {
     // 0. 確保 Merkle Tree 同步 (與 Test Script 一致)
     // Test Script: await getEngine().scanContractHistory(chain, undefined);
@@ -83,12 +90,13 @@ export const triggerBalanceRefresh = async (walletId: string) => {
  * 但我們先清空本地 Cache，讓 UI 有「重新抓取」的感覺。
  */
 export const triggerFullRescan = async (walletId: string) => {
-  const chain = NETWORK_CONFIG[TEST_NETWORK].chain;
+  // @ts-ignore
+  const chain = NETWORK_CONFIG[CONFIG.NETWORK.NAME].chain;
   console.log("⚠️ 執行強制掃描 (Full Rescan)...", chain);
-  
-  // 1. 清空本地 Cache，強制 UI 重新渲染
-  balanceCache.clear();
-  
+
+  // 1. 清空本地 Cache (前端 UI 負責)
+  // balanceCache.clear();
+
   try {
     // 2. 再次呼叫 refreshBalances (它是目前最穩定的掃描 API)
     // Railgun Engine 內部會自動判斷是否需要下載新的 Merkle Tree
@@ -103,9 +111,9 @@ export const triggerFullRescan = async (walletId: string) => {
 /**
  * 取得目前 Cache 中的可花費餘額 (Spendable)
  */
-export const getSpendableBalances = () => {
-  return balanceCache.get(RailgunWalletBalanceBucket.Spendable);
-};
+// export const getSpendableBalances = () => {
+//   return balanceCache.get(RailgunWalletBalanceBucket.Spendable);
+// };
 
 /**
  * 🔥 核彈級重置 (Hard Reset)
@@ -114,23 +122,23 @@ export const getSpendableBalances = () => {
  */
 export const clearRailgunStorage = async () => {
   console.warn("⚠️ 正在刪除 Railgun 本地資料庫...");
-  
+
   // 1. 嘗試關閉連線 (非必要，但良好習慣)
   // 如果有 stopRailgunEngine 之類的可以呼叫，但直接刪 DB 最快
 
   // 2. 刪除 IndexedDB
   // Railgun 預設的 DB 名稱通常是 "railgun-web-db" (看你的 log 確認的)
   const dbName = "railgun-web-db";
-  
+
   const req = window.indexedDB.deleteDatabase(dbName);
-  
+
   req.onsuccess = () => {
     console.log("✅ 資料庫刪除成功！");
     alert("快取已清除！網頁將重新整理以開始完整掃描。");
     // 3. 強制重整，讓 Engine 重啟並重建 DB
     window.location.reload();
   };
-  
+
   req.onerror = () => {
     console.error("❌ 無法刪除資料庫");
     alert("清除失敗，請手動清除瀏覽器快取。");

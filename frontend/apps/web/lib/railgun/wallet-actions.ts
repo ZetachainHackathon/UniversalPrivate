@@ -1,19 +1,31 @@
 import { Mnemonic, randomBytes } from "ethers";
-import { 
-  createRailgunWallet, 
-  loadWalletByID, 
+import {
+  createRailgunWallet,
+  loadWalletByID,
   getWalletShareableViewingKey,
   createViewOnlyRailgunWallet
 } from "@railgun-community/wallet";
-import { 
-  NETWORK_CONFIG, 
-  NetworkName ,
+import {
+  NETWORK_CONFIG,
+  NetworkName,
   type RailgunWalletInfo
 } from "@railgun-community/shared-models";
 
 // 👇 引入我們之前寫好的模組
 import { getEncryptionKeyFromPassword, setEncryptionKeyFromPassword } from "./encryption";
-import { TEST_NETWORK } from "@/constants";
+import { CONFIG } from "@/config/env";
+import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
+
+/**
+ * 取得當前網路的起始區塊 (優化掃描速度)
+ */
+const getCreationBlockMap = () => {
+  // @ts-ignore
+  const { deploymentBlock } = NETWORK_CONFIG[CONFIG.NETWORK.NAME];
+  return {
+    [CONFIG.NETWORK.NAME]: deploymentBlock ?? 0,
+  };
+};
 
 /**
  * 產生新的 12 個字助記詞
@@ -45,24 +57,20 @@ export const createPrivateWallet = async (
   password: string,
   mnemonic: string
 ): Promise<RailgunWalletInfo> => {
-  
+
   // 1. 取得加密金鑰 (假設使用者已經註冊過密碼，或者你可以在這裡呼叫 setEncryptionKey)
   // 如果是全新的流程，這裡應該呼叫 setEncryptionKeyFromPassword
   let encryptionKey: string;
   try {
-     encryptionKey = await getEncryptionKeyFromPassword(password);
+    encryptionKey = await getEncryptionKeyFromPassword(password);
   } catch (e) {
-     // 如果找不到金鑰，代表是第一次使用，我們幫他設定
-     console.log("偵測到新用戶，正在設定加密金鑰...");
-     encryptionKey = await setEncryptionKeyFromPassword(password);
+    // 如果找不到金鑰，代表是第一次使用，我們幫他設定
+    console.log("偵測到新用戶，正在設定加密金鑰...");
+    encryptionKey = await setEncryptionKeyFromPassword(password);
   }
 
-  // 2. 設定掃描起始區塊 (優化掃描速度)
-  // 我們只關心 TEST_NETWORK 的起始區塊
-  const { deploymentBlock } = NETWORK_CONFIG[TEST_NETWORK];
-  const creationBlockMap = {
-    [TEST_NETWORK]: deploymentBlock ?? 0, // 如果沒定義就從 0 開始
-  };
+  // 2. 設定掃描起始區塊
+  const creationBlockMap = getCreationBlockMap();
 
   // 3. 呼叫 SDK 創建錢包
   console.log("正在創建 Railgun 錢包...");
@@ -73,7 +81,7 @@ export const createPrivateWallet = async (
   );
 
   // 4. 將 Wallet ID 存入 LocalStorage (方便下次自動載入)
-  localStorage.setItem("railgun_wallet_id", railgunWalletInfo.id);
+  BrowserStorage.set(STORAGE_KEYS.RAILGUN_WALLET_ID, railgunWalletInfo.id);
 
   console.log("✅ 錢包創建成功 ID:", railgunWalletInfo.id);
   return railgunWalletInfo;
@@ -87,9 +95,9 @@ export const createPrivateWallet = async (
 export const loadPrivateWallet = async (
   password: string
 ): Promise<RailgunWalletInfo> => {
-  
+
   // 1. 從 LocalStorage 取得上次的 Wallet ID
-  const walletId = localStorage.getItem("railgun_wallet_id");
+  const walletId = BrowserStorage.get(STORAGE_KEYS.RAILGUN_WALLET_ID);
   if (!walletId) {
     throw new Error("找不到錢包 ID，請先創建錢包。");
   }
@@ -100,7 +108,7 @@ export const loadPrivateWallet = async (
   // 3. 載入錢包
   // isViewOnly: false (因為我們有私鑰，可以發送交易)
   const walletInfo = await loadWalletByID(encryptionKey, walletId, false);
-  
+
   console.log("✅ 錢包載入成功:", walletInfo.id);
   return walletInfo;
 };
@@ -131,10 +139,10 @@ export const generateViewKey = async (walletId: string): Promise<string> => {
  * @param shareableViewKey 對方給的查看金鑰
  */
 export const createViewOnlyWallet = async (
-  password: string, 
+  password: string,
   shareableViewKey: string
 ): Promise<RailgunWalletInfo> => {
-  
+
   // 1. 取得加密金鑰
   const encryptionKey = await getEncryptionKeyFromPassword(password);
 
@@ -143,7 +151,7 @@ export const createViewOnlyWallet = async (
   const walletInfo = await createViewOnlyRailgunWallet(
     encryptionKey,
     shareableViewKey,
-    undefined 
+    undefined
   );
 
   console.log("✅ 只讀錢包創建成功 ID:", walletInfo.id);
@@ -159,13 +167,13 @@ export const loadViewOnlyWallet = async (
   password: string,
   walletId: string
 ): Promise<RailgunWalletInfo> => {
-  
+
   const encryptionKey = await getEncryptionKeyFromPassword(password);
 
   // ⚠️ 關鍵差異：第三個參數 isViewOnly 必須為 true
   const walletInfo = await loadWalletByID(
-    encryptionKey, 
-    walletId, 
+    encryptionKey,
+    walletId,
     true // <--- 這代表載入的是只讀錢包 (沒有 Spending Key)
   );
 

@@ -1,4 +1,5 @@
 import { pbkdf2, getRandomBytes } from "@railgun-community/wallet";
+import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
 // ------------------------------------------------------------------
 // 1. 基礎 Hash 服務 (Hash Service)
 // ------------------------------------------------------------------
@@ -27,7 +28,7 @@ export const hashPasswordString = async ({
  */
 export const storeData = async (key: string, data: any): Promise<void> => {
   if (typeof window === "undefined") return; // 防止在 Server 端執行報錯
-  localStorage.setItem(key, JSON.stringify({ data }));
+  BrowserStorage.set(key, JSON.stringify({ data }));
 };
 
 /**
@@ -35,7 +36,7 @@ export const storeData = async (key: string, data: any): Promise<void> => {
  */
 export const getData = async (key: string): Promise<any> => {
   if (typeof window === "undefined") return null;
-  const item = localStorage.getItem(key);
+  const item = BrowserStorage.get(key);
   if (!item) throw new Error(`Data not found for key: ${key}`);
   return JSON.parse(item).data;
 };
@@ -60,14 +61,14 @@ export const setEncryptionKeyFromPassword = async (
 
   const [encryptionKey, hashPasswordStored] = await Promise.all([
     // 產生加密金鑰 (給 Railgun Engine 用)
-    hashPasswordString({ secret: password, salt: saltHex, iterations: 100000 }), 
+    hashPasswordString({ secret: password, salt: saltHex, iterations: 100000 }),
     // 產生儲存用的 Hash (驗證密碼用，迭代次數更多更安全)
-    hashPasswordString({ secret: password, salt: saltHex, iterations: 1000000 }), 
+    hashPasswordString({ secret: password, salt: saltHex, iterations: 1000000 }),
   ]);
 
   // 存入 localStorage
-  await storeData("railgun_hash_store", hashPasswordStored);
-  await storeData("railgun_salt", saltHex);
+  await storeData(STORAGE_KEYS.RAILGUN_HASH_STORE, hashPasswordStored);
+  await storeData(STORAGE_KEYS.RAILGUN_SALT, saltHex);
 
   return encryptionKey;
 };
@@ -84,8 +85,8 @@ export const getEncryptionKeyFromPassword = async (
 
   try {
     [storedPasswordHash, storedSalt] = await Promise.all([
-      getData("railgun_hash_store"),
-      getData("railgun_salt"),
+      getData(STORAGE_KEYS.RAILGUN_HASH_STORE),
+      getData(STORAGE_KEYS.RAILGUN_SALT),
     ]);
   } catch (e) {
     throw new Error("找不到儲存的密碼資料，請先設定密碼。");
