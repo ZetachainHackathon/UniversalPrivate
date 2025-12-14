@@ -77,7 +77,45 @@ Railgun Engine 是一個較重的 WASM後台進程。
 *   **局部**: 表單狀態 (React `useState`).
 *   **反饋**: 使用 `sonner` Toast 處理異步操作的狀態提示。
 
----
+### 3.4 微觀架構詳解 (Micro Architecture Detail)
+
+本節深入解釋 `apps/web` 下各個核心目錄的具體職責。
+
+#### 1. `components/cross-chain/` (業務組件)
+這些是專門為 "跨鏈隱私交易" 頁面設計的業務組件，並非通用 UI。
+*   **`header.tsx`**: 頂部狀態列。負責顯示當前連線的網路 (Sepolia/ZetaChain)、錢包連接按鈕、以及 Railgun 餘額 (ZRC20)。
+*   **`shield-form.tsx`**: "入金" 表單。負責收集用戶輸入 (Token, Amount)，並呼叫 `useShieldTransaction` 將公開代幣轉換為私有代幣 (Shield)。
+*   **`transfer-form.tsx`**: "隱私轉帳/跨鏈" 表單。負責收集接收方與金額，處理 0zk -> 0zk 轉帳或 Unshield 跨鏈操作。
+
+#### 2. `components/providers/` (全局 Context)
+應用程式的 "脊椎"，負責管理全域單例狀態。
+*   **`wallet-provider.tsx`**: 封裝 Ethers.js 的 `BrowserProvider`。管理 MetaMask 連線、Chain ID 監聽與切換網路功能。
+*   **`railgun-provider.tsx`**: 管理 Railgun Wallet 的生命週期。
+    *   `login(password)`: 驗證密碼並設定 Session Key。
+    *   `walletInfo`: 當前加載的 Railgun 錢包資訊 (ID, Address)。
+*   **`confirm-dialog-provider.tsx`**: 提供 `useConfirm` hook。允許在任何地方 (包含 Hooks 內部) 喚起一個 Promise-based 的確認視窗。
+
+#### 3. `hooks/` (邏輯核心)
+這裡是 "大腦"，所有副作用與複雜計算都在此發生。
+*   **`use-shield-tx.ts`**: 封裝 Shield 流程。
+    *   自動檢查 Allowance (授權)。
+    *   區分 Cross-Chain Shield (Sepolia -> Zeta) 與 Local Shield。
+*   **`use-transfer-tx.ts`**: 封裝 Transfer 流程。
+    *   生成 Zero-Knowledge Proof (運算密集型)。
+    *   建構跨鏈 Unshield Transaction。
+*   **`use-network-sync.ts`**: 確保 URL 路由與當前錢包網路一致。
+*   **`use-railgun-auto-scan.ts`**: 背景勾子，定時觸發餘額掃描與 Merkle Tree 重建。
+
+#### 4. `lib/railgun/` (SDK 封裝層)
+直接與 `@railgun-community/*` SDK 交互的底層代碼，隔離了 SDK 的複雜性。
+*   **`wallet.ts` / `wallet-actions.ts`**: 錢包創建、載入、助記詞管理。
+*   **`shield.ts`**: 建構 Shield Transaction 的具體實作 (Ethers Contract calls)。
+*   **`transfer.ts`**: 建構 0zk -> 0zk 的 Proof 與 Transaction。
+*   **`cross-chain-transfer.ts`**: 最複雜的檔案。負責處理：
+    1.  生成 Unshield Proof (私有 -> 公開)。
+    2.  建構對 `ZetachainAdapt` 合約的呼叫 (轉移資產)。
+    3.  建構對 `EVMAdapt` 的 `unshieldOutsideChain` 呼叫。
+*   **`db.ts`**: 配置 LevelDB 用於儲存加密數據。
 
 ## 4. UI 架構 (UI Architecture)
 
