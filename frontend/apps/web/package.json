@@ -8,7 +8,7 @@
     "build": "pnpm copy-artifacts && next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest",
+    "test": "vitest run",
     "check-types": "next typegen && tsc --noEmit",
     "copy-artifacts": "mkdir -p public/test-artifacts && cp -r node_modules/railgun-circuit-test-artifacts/circuits/* public/test-artifacts/"
   },
