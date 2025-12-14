@@ -1,6 +1,5 @@
 {
     "framework": "nextjs",
     "buildCommand": "cd apps/web && pnpm build",
-    "installCommand": "pnpm install",
-    "ignoreCommand": "git diff --quiet HEAD^ HEAD ./"
+    "installCommand": "pnpm install"
 }
