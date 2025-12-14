@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@repo/ui/components/button";
 import { formatEther, ZeroAddress } from "ethers";
 import { NETWORK_CONFIG, NetworkName } from "@railgun-community/shared-models";
@@ -15,7 +16,6 @@ interface TransferFormProps {
     balances: any;
     handleTransfer: () => void;
     isLoading: boolean;
-    status: string;
 }
 
 export function TransferForm({
@@ -30,8 +30,8 @@ export function TransferForm({
     balances,
     handleTransfer,
     isLoading,
-    status,
 }: TransferFormProps) {
+
     return (
         <div className="space-y-4">
             <div className="flex gap-4 mb-4">
@@ -130,11 +130,11 @@ export function TransferForm({
             </div>
 
             <Button
-                onClick={handleTransfer}
+                onClick={() => handleTransfer()}
                 disabled={isLoading}
                 className="w-full py-6 text-xl font-bold bg-white text-black border-2 border-black hover:bg-gray-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all mt-4"
             >
-                {isLoading ? status : "發送交易"}
+                {isLoading ? "處理中..." : "發送交易"}
             </Button>
         </div>
     );

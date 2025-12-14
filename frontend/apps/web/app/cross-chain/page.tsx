@@ -25,12 +25,16 @@ const DEFAULT_TOKEN_ADDRESS = ZeroAddress; // 預設使用原生代幣 (ETH)
 export default function CrossChainPage() {
   // 從 Context 取得 signer 和 address
   const { isConnected, signer, address, checkNetwork, connectWallet, switchNetwork } = useWallet();
-  const { balances, scanProgress, reset, isReady } = useRailgun();
+  const { balances, scanProgress, walletInfo } = useRailgun();
 
   // State
-  const [password, setPassword] = useState("");
-  const [railgunAddress, setRailgunAddress] = useState("");
-  const [walletId, setWalletId] = useState(""); // 新增 walletId state
+  // const [password, setPassword] = useState(""); // Removed: Moved to Header
+  // const [railgunAddress, setRailgunAddress] = useState(""); // Removed: Moved to Context
+  // const [walletId, setWalletId] = useState(""); // Removed: Moved to Context
+
+  const railgunAddress = walletInfo?.railgunAddress || "";
+  const walletId = walletInfo?.id || "";
+
   const [adaptAddress, setAdaptAddress] = useState(DEFAULT_ADAPT_ADDRESS);
   const [tokenAddress, setTokenAddress] = useState(DEFAULT_TOKEN_ADDRESS);
   const [selectedChain, setSelectedChain] = useState("sepolia");
@@ -39,16 +43,21 @@ export default function CrossChainPage() {
   const [transferType, setTransferType] = useState<"internal" | "cross-chain">("internal");
 
 
-  // Transaction Hooks
-  const { executeShield, isLoading: isShieldLoading, status: shieldStatus, txHash: shieldTxHash } = useShieldTransaction();
-  const { executeTransfer, isLoading: isTransferLoading, status: transferStatus, txHash: transferTxHash } = useTransferTransaction();
+  // Hooks (Phase 2 Smart Hooks + Phase 3 Toast)
+  const { executeShield, isLoading: isLoadingShield, txHash: txHashShield } = useShieldTransaction();
+  const {
+    executeTransfer,
+    isLoading: isLoadingTransfer,
+    txHash: txHashTransfer
+  } = useTransferTransaction();
 
+  // 合併 txHash 以顯示 (簡單處理：顯示最新的那個)
+  const txHash = txHashShield || txHashTransfer;
   // Combine status for display
   const [scanStatus, setScanStatus] = useState("");
-  const isLoading = isShieldLoading || isTransferLoading;
-  const status = shieldStatus || transferStatus || scanStatus;
-  const txHash = shieldTxHash || transferTxHash;
-  // const [liveBalance, setLiveBalance] = useState("0"); // Replaced by hook
+  const isLoading = isLoadingShield || isLoadingTransfer;
+  const status = scanStatus; // Only scanStatus remains as a direct status string
+
   // 1. 同步網路
   useNetworkSync(signer || undefined, selectedChain, setSelectedChain);
 
@@ -86,118 +95,29 @@ export default function CrossChainPage() {
     }
   };
 
-  // 載入錢包資訊
-  const handleLoadWallet = async () => {
-    if (!password) return alert("請輸入密碼");
-    try {
-      // 1. 先重置餘額狀態，避免顯示上一個錢包的餘額
-      reset();
-
-      const walletInfo = await loadPrivateWallet(password);
-      setRailgunAddress(walletInfo.railgunAddress);
-      setWalletId(walletInfo.id);
-
-      setWalletId(walletInfo.id);
-
-      // 2. 觸發餘額掃描 (這裡需要保留手動觸發，確保 UI 立即回應)
-      const { triggerBalanceRefresh } = await import("@/lib/railgun/balance");
-      await triggerBalanceRefresh(walletInfo.id);
-    } catch (e: any) {
-      alert("載入失敗: " + e.message);
-    }
-  };
-
-
-  // 創建錢包
-  const handleCreateWallet = async () => {
-    if (!password) return alert("請輸入密碼以保護新錢包");
-    try {
-      const { createMnemonic, createPrivateWallet } = await import("@/lib/railgun/wallet-actions");
-      const mnemonic = createMnemonic();
-      const walletInfo = await createPrivateWallet(password, mnemonic);
-
-      alert("✅ 錢包創建成功！\n\n請務必備份助記詞：\n" + mnemonic);
-
-      setRailgunAddress(walletInfo.railgunAddress);
-      setWalletId(walletInfo.id);
-
-      const { triggerBalanceRefresh } = await import("@/lib/railgun/balance");
-      await triggerBalanceRefresh(walletInfo.id);
-    } catch (e: any) {
-      alert("創建失敗: " + e.message);
-    }
-  };
-
-  // 複製功能
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    alert(`${label} 已複製！`);
-  };
-
-  // 清除快取 (Hard Reset)
-  const handleHardReset = async () => {
-    if (!confirm("⚠️ 警告：這將清除應用程式的本地資料庫並重新整理頁面。\n\n如果你的錢包餘額顯示不正確，這通常可以解決問題。確定要繼續嗎？")) {
-      return;
-    }
-
-    try {
-      const { clearRailgunStorage } = await import("@/lib/railgun/balance");
-      await clearRailgunStorage();
-      alert("✅ 快取已清除！即將重新整理...");
-      window.location.reload();
-    } catch (e: any) {
-      alert("❌ 清除失敗: " + e.message);
-    }
-  };
-
   // 執行 Shield (入金)
   const handleShield = async () => {
     await executeShield({
-      railgunAddress,
       adaptAddress,
       tokenAddress,
       amount,
       selectedChain,
-      signer: signer || undefined,
-      isConnected,
-      connectWallet,
-      checkNetwork,
-      switchNetwork,
-      walletId
     });
   };
 
   // 執行 Transfer (轉帳)
   const handleTransfer = async () => {
+    // 密碼已由 Context 自動管理
     await executeTransfer({
-      railgunAddress,
-      walletId,
       recipient,
       amount,
       transferType,
-      password,
-      signer: signer || undefined,
-      isConnected,
-      connectWallet,
-      checkNetwork,
-      switchNetwork
     });
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <CrossChainHeader
-        railgunAddress={railgunAddress}
-        password={password}
-        setPassword={setPassword}
-        handleLoadWallet={handleLoadWallet}
-        handleCreateWallet={handleCreateWallet}
-        isConnected={isConnected}
-        address={address}
-        connectWallet={connectWallet}
-        handleHardReset={handleHardReset}
-        isRailgunReady={isReady}
-      />
+      <CrossChainHeader />
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center p-6">
@@ -231,7 +151,6 @@ export default function CrossChainPage() {
                 liveBalance={liveBalance}
                 handleShield={handleShield}
                 isLoading={isLoading}
-                status={status}
               />
             </TabsContent>
 
@@ -249,17 +168,16 @@ export default function CrossChainPage() {
                 balances={balances}
                 handleTransfer={handleTransfer}
                 isLoading={isLoading}
-                status={status}
               />
             </TabsContent>
           </Tabs>
 
           {/* Status & Links */}
-          {status && (
+          {/* {status && ( // Removed: status UI block
             <div className="mt-8 p-4 bg-gray-100 border-2 border-black rounded-lg text-center font-bold">
               {status}
             </div>
-          )}
+          )} */}
 
           {txHash && (
             <div className="mt-4 text-center">

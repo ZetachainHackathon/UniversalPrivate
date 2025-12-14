@@ -4,63 +4,79 @@ import { executeCrossChainShield } from "@/lib/railgun/cross-chain-shield";
 import { executeLocalShield } from "@/lib/railgun/shield";
 import { CONFIG } from "@/config/env";
 import { TEST_NETWORK } from "@/constants";
+import { useWallet } from "@/components/providers/wallet-provider";
+import { useRailgun } from "@/components/providers/railgun-provider";
+import { toast } from "@repo/ui/components/sonner";
+
+import { useConfirm } from "@/components/providers/confirm-dialog-provider";
 
 interface UseShieldTxProps {
-    railgunAddress: string;
     adaptAddress: string;
     tokenAddress: string;
     amount: string;
     selectedChain: string;
-    signer: any;
-    isConnected: boolean;
-    connectWallet: () => Promise<void>;
-    checkNetwork: (chainId: bigint) => Promise<boolean>;
-    switchNetwork: (chainIdHex: string) => Promise<void>;
-    walletId: string;
 }
 
 export const useShieldTransaction = () => {
     const [isLoading, setIsLoading] = useState(false);
-    const [status, setStatus] = useState("");
+    // const [status, setStatus] = useState(""); // Removed in favor of Toast
     const [txHash, setTxHash] = useState("");
 
+    const { signer, isConnected, connectWallet, checkNetwork, switchNetwork } = useWallet();
+    const { walletInfo } = useRailgun();
+    const { confirm } = useConfirm();
+
     const executeShield = async ({
-        railgunAddress,
         adaptAddress,
         tokenAddress,
         amount,
         selectedChain,
-        signer,
-        isConnected,
-        connectWallet,
-        checkNetwork,
-        switchNetwork,
-        walletId
     }: UseShieldTxProps) => {
-        if (!railgunAddress) return alert("請先解鎖 Railgun 錢包");
-        if (!isAddress(adaptAddress)) return alert("合約地址格式錯誤");
-
-        if (!isConnected || !signer) {
-            try { await connectWallet(); return; } catch (e) { return alert("連接錢包失敗"); }
+        // 1. 檢查 Railgun 狀態
+        const railgunAddress = walletInfo?.railgunAddress;
+        if (!railgunAddress) {
+            toast.error("請先解鎖 Railgun 錢包");
+            return;
         }
 
-        // 根據選擇的鏈進行檢查
+        // 2. 檢查參數
+        if (!isAddress(adaptAddress)) {
+            toast.error("合約地址格式錯誤");
+            return;
+        }
+
+        // 3. 檢查錢包連接
+        if (!isConnected || !signer) {
+            try { await connectWallet(); return; } catch (e) { toast.error("連接錢包失敗"); return; }
+        }
+
+        // 4. 根據選擇的鏈進行檢查
         if (selectedChain === "sepolia") {
             const isSepolia = await checkNetwork(BigInt(CONFIG.CHAINS.SEPOLIA.ID_DEC));
             if (!isSepolia) {
-                if (confirm("切換至 Sepolia 網路？")) await switchNetwork(CONFIG.CHAINS.SEPOLIA.ID_HEX);
+                const confirmed = await confirm({
+                    title: "網路不符",
+                    description: "此操作需要在 Sepolia 網路上進行。是否切換網路？",
+                    confirmText: "切換網路"
+                });
+                if (confirmed) await switchNetwork(CONFIG.CHAINS.SEPOLIA.ID_HEX);
                 return;
             }
         } else if (selectedChain === "zetachain") {
             const isZeta = await checkNetwork(BigInt(CONFIG.CHAINS.ZETACHAIN.ID_DEC));
             if (!isZeta) {
-                if (confirm("切換至 ZetaChain 網路？")) await switchNetwork(CONFIG.CHAINS.ZETACHAIN.ID_HEX);
+                const confirmed = await confirm({
+                    title: "網路不符",
+                    description: "此操作需要在 ZetaChain 網路上進行。是否切換網路？",
+                    confirmText: "切換網路"
+                });
+                if (confirmed) await switchNetwork(CONFIG.CHAINS.ZETACHAIN.ID_HEX);
                 return;
             }
         }
 
         setIsLoading(true);
-        setStatus("⏳ 正在準備 Shield 交易...");
+        const toastId = toast.loading("正在準備 Shield 交易...");
         setTxHash("");
 
         try {
@@ -92,22 +108,23 @@ export const useShieldTransaction = () => {
                 );
             }
 
-            setStatus("✅ 交易已送出！等待上鏈...");
+            toast.loading("交易已送出！等待上鏈...", { id: toastId });
             await tx.wait();
+
             setTxHash(tx.hash);
-            setStatus("🎉 Shield 成功！");
+            toast.success("Shield 成功！", { id: toastId });
 
             // 交易成功後，延遲 5 秒觸發一次掃描
-            if (walletId) {
+            if (walletInfo?.id) {
                 setTimeout(async () => {
                     console.log("🔄 交易後觸發餘額更新...");
                     const { triggerBalanceRefresh } = await import("@/lib/railgun/balance");
-                    triggerBalanceRefresh(walletId).catch(console.error);
+                    triggerBalanceRefresh(walletInfo.id).catch(console.error);
                 }, 5000);
             }
         } catch (error: any) {
             console.error(error);
-            setStatus("❌ 交易失敗: " + (error.reason || error.message));
+            toast.error("交易失敗: " + (error.reason || error.message), { id: toastId });
         } finally {
             setIsLoading(false);
         }
@@ -116,7 +133,7 @@ export const useShieldTransaction = () => {
     return {
         executeShield,
         isLoading,
-        status,
+        // status, // Removed
         txHash
     };
 };

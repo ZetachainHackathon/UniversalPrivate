@@ -12,7 +12,6 @@ interface ShieldFormProps {
     liveBalance: string;
     handleShield: () => void;
     isLoading: boolean;
-    status: string;
 }
 
 export function ShieldForm({
@@ -25,7 +24,6 @@ export function ShieldForm({
     liveBalance,
     handleShield,
     isLoading,
-    status,
 }: ShieldFormProps) {
     return (
         <div className="space-y-6">
@@ -91,7 +89,7 @@ export function ShieldForm({
                 disabled={isLoading}
                 className="w-full py-6 text-xl font-bold bg-black text-white hover:bg-gray-800 border-2 border-transparent shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all mt-4"
             >
-                {isLoading ? status : "執行 Shield (入金)"}
+                {isLoading ? "處理中..." : "執行 Shield (入金)"}
             </Button>
         </div>
     );

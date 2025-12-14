@@ -8,6 +8,8 @@
     "./components/card": "./src/components/card.tsx",
     "./components/code": "./src/components/code.tsx",
     "./components/tabs": "./src/components/tabs.tsx",
+    "./components/sonner": "./src/components/sonner.tsx",
+    "./components/dialog": "./src/components/dialog.tsx",
     "./lib": "./src/lib/index.ts",
     "./lib/cn": "./src/lib/cn.ts",
     "./globals.css": "./src/globals.css"
@@ -30,12 +32,14 @@
     "typescript": "5.9.2"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7"
   }
