@@ -1,5 +1,6 @@
 {
     "framework": "nextjs",
     "buildCommand": "cd apps/web && pnpm build",
-    "installCommand": "pnpm install"
+    "installCommand": "pnpm install",
+    "ignoreCommand": "npx turbo-ignore"
 }
