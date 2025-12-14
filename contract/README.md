@@ -35,26 +35,47 @@
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Deploy railgun on Zetachain
+### Deploy Railgun on Zetachain
+
+Deploys the complete Railgun system (Railgun Smart Wallet, RelayAdapt, ZetachainAdapt) on ZetaChain.
 
 Refer from https://www.zetachain.com/docs/reference/network/contracts
 
 ```bash
-npx hardhat deploy:zetachain \
+npx hardhat deploy:railgun \
   --network zetachain-testnet \
   --weth9 0x5F0b1a82749cb4E2278EC87F8BF6B618dC71a8bf \
   --zetachaingateway 0x6c533f7fe93fae114d0954697069df33c9b74fd7 \
   --uniswaprouter 0x2ca7d64A7EFE2D62A725E2B35Cf7230D6677FfEe
 ```
 
+### Deploy ZetachainAdapt on Zetachain
+
+If you need to deploy ZetachainAdapt separately (e.g., redeployment or upgrade):
+
+```bash
+npx hardhat deploy:zetachainAdapt --network zetachain-testnet
+```
+
+The script will automatically load addresses from `deployments/zetachain-testnet.json`:
+- `--railgun`: From `contracts.RailgunProxy.address`
+- `--relayadapt`: From `contracts.RelayAdapt.address`
+- `--uniswaprouter`: From `externalContracts.UniswapRouter`
+
+You can also manually specify any or all parameters to override the deployment config.
+
 ### Deploy evmAdapt on Sepolia
 
 ```bash
 npx hardhat deploy:evmAdapt \
   --gatewayevm 0x0c487a766110c85d301d96e33579c5b317fa4995 \
-  --zetachainadapt <zetachainAdapt> \
   --network sepolia
 ```
+
+The script will automatically load the ZetachainAdapt address from `deployments/zetachain-testnet.json`:
+- `--zetachainadapt`: From `contracts.ZetachainAdapt.address`
+
+You can also manually specify the parameter to override the deployment config.
 
 ## Deployment Management
 

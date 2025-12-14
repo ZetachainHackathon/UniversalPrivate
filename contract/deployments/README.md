@@ -58,7 +58,7 @@ The check script will:
 Deployment records are automatically created/updated when you run deployment scripts:
 
 ```bash
-npx hardhat deploy:zetachain --network zetachain-testnet
+npx hardhat deploy:railgun --network zetachain-testnet
 ```
 
 This will:
@@ -148,7 +148,7 @@ When deployment addresses change:
 
 **Solution**: Deploy contracts first:
 ```bash
-npx hardhat deploy:zetachain --network zetachain-testnet
+npx hardhat deploy:railgun --network zetachain-testnet
 ```
 
 ### Contract not found on chain

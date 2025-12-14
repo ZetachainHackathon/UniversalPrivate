@@ -22,7 +22,7 @@ async function main() {
       console.log("   (no deployment files found)");
     }
     console.log("\n💡 Tip: Deploy contracts first using:");
-    console.log(`   npx hardhat deploy:zetachain --network ${networkName}\n`);
+    console.log(`   npx hardhat deploy:railgun --network ${networkName}\n`);
     process.exit(1);
   }
 

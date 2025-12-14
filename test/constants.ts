@@ -56,3 +56,9 @@ export const TEST_PRIVATE_KEY = process.env.PRIVATE_KEY;
 export const TEST_ENCRYPTION_KEY =
   "0101010101010101010101010101010101010101010101010101010101010101";
 
+/**
+ * Deployment network names for contract address lookup
+ */
+export const ZETACHAIN_DEPLOYMENT_NETWORK = "zetachain-testnet";
+export const SEPOLIA_DEPLOYMENT_NETWORK = "sepolia";
+

@@ -3,10 +3,12 @@ import {
   calculateGasPrice,
   NetworkName,
   TXIDVersion,
+  NETWORK_CONFIG,
   type FeeTokenDetails,
   type RailgunERC20AmountRecipient,
   type RailgunWalletInfo,
   type TransactionGasDetails,
+  type POIList,
 } from "@railgun-community/shared-models";
 import {
   gasEstimateForUnprovenTransfer,
@@ -14,16 +16,25 @@ import {
   populateProvedTransfer,
   createRailgunWallet,
   overrideArtifact,
+  startRailgunEngine,
+  stopRailgunEngine,
+  getEngine,
 } from "@railgun-community/wallet";
 import {
   getGasDetailsForTransaction,
   getOriginalGasDetailsForTransaction,
   serializeERC20Transfer,
 } from "./transcation/util";
-import { TEST_ENCRYPTION_KEY, TEST_NETWORK, TEST_TOKEN } from "./constants";
+import { TEST_ENCRYPTION_KEY, TEST_NETWORK, TEST_TOKEN, ZETACHAIN_DEPLOYMENT_NETWORK, SEPOLIA_DEPLOYMENT_NETWORK } from "./constants";
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
 import { Contract } from "ethers";
 import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
+import { createNodeDatabase } from "./db";
+import { createArtifactStore } from "./artifact";
+import { loadEngineProvider } from "./loadProvider";
+import { setupNodeGroth16 } from "./prover";
+import { setupBalanceCallbacks, runBalancePoller, waitForBalancesLoaded, displaySpendableBalances } from "./balances";
+import { loadDeployment, getContractAddress } from "./deployments";
 /*
 import {
   getBroadcasterDetails,
@@ -248,7 +259,7 @@ export const executePrivateTransfer = async (
   sendWithPublicWallet: boolean = true
 ) => {
   const sepoliaWallet = getSepoliaWallet();
-  const EVM_ADAPT_ADDRESS = "0x42a7bdB80f12c857bA0ebF9c440e6A1D9Af675Aa"; // Sepolia EVMAdapt address
+  const EVM_ADAPT_ADDRESS = getContractAddress(SEPOLIA_DEPLOYMENT_NETWORK, "EVMAdapt");
   const evmAdaptContract = new Contract(
     EVM_ADAPT_ADDRESS,
     [
@@ -256,7 +267,7 @@ export const executePrivateTransfer = async (
     ],
     sepoliaWallet.wallet
   );
-  
+
   const mnemonic = process.env.MNEMONIC || "junk junk junk test test test test test test test test test";
   const receiverWalletInfo = await createRailgunWallet(
     TEST_ENCRYPTION_KEY,
@@ -271,3 +282,123 @@ export const executePrivateTransfer = async (
   console.log("Private Transfer TX: ", tx.hash);
   return tx.hash;
 };
+
+/**
+ * Initializes the RAILGUN engine with the specified configuration.
+ */
+const initializeEngine = async (args?: {
+  walletSource?: string;
+  dbPath?: string;
+  artifactsPath?: string;
+  ppoiNodes?: string[];
+}): Promise<void> => {
+  const walletSource = args?.walletSource ?? "quickstart demo";
+  const dbPath = args?.dbPath ?? "./engine.db";
+  const db = createNodeDatabase(dbPath);
+  const shouldDebug = true;
+  const artifactPath = args?.artifactsPath ?? "artifacts-directory";
+  const artifactStore = createArtifactStore(artifactPath);
+  const useNativeArtifacts = false;
+  const skipMerkletreeScans = false;
+  const poiNodeURLs: string[] = args?.ppoiNodes ?? [
+    "https://ppoi-agg.horsewithsixlegs.xyz",
+  ];
+  const customPOILists: POIList[] = [];
+  const verboseScanLogging = true;
+
+  await startRailgunEngine(
+    walletSource,
+    db,
+    shouldDebug,
+    artifactStore,
+    useNativeArtifacts,
+    skipMerkletreeScans,
+    poiNodeURLs,
+    customPOILists,
+    verboseScanLogging
+  );
+
+  process.on("SIGINT", async (sigint) => {
+    console.log("EXIT DETECTED", sigint);
+    await stopRailgunEngine();
+    process.exit(0);
+  });
+};
+
+/**
+ * Main entry point for running private transfer independently
+ */
+const main = async () => {
+  try {
+    // Initialize RAILGUN Engine
+    await initializeEngine();
+    console.log("RAILGUN Engine initialized");
+
+    // Configure RAILGUN contract addresses from deployment
+    const zetachainDeployment = loadDeployment(ZETACHAIN_DEPLOYMENT_NETWORK);
+    NETWORK_CONFIG[TEST_NETWORK].proxyContract = zetachainDeployment.contracts.RailgunProxy.address;
+    NETWORK_CONFIG[TEST_NETWORK].relayAdaptContract = zetachainDeployment.contracts.RelayAdapt.address;
+
+    console.log("RAILGUN contract addresses configured:");
+    console.log("  - RailgunProxy:", NETWORK_CONFIG[TEST_NETWORK].proxyContract);
+    console.log("  - RelayAdapt:", NETWORK_CONFIG[TEST_NETWORK].relayAdaptContract);
+
+    // Load Network
+    await loadEngineProvider();
+    console.log("Network loaded");
+    await setupNodeGroth16();
+    console.log("Groth16 setup");
+
+    // Define Chain (Zetachain)
+    const chain = NETWORK_CONFIG[TEST_NETWORK].chain;
+
+    // Scan contract history (sync Merkletree)
+    console.log("Starting contract history scan...");
+    await getEngine().scanContractHistory(chain, undefined);
+    console.log("Contract history scan started (this may take a while)");
+
+    // Create wallet (use your mnemonic)
+    const mnemonic = process.env.MNEMONIC || "test test test test test test test test test test test junk";
+
+    console.log("Creating Railgun wallet...");
+    const walletInfo = await createRailgunWallet(
+      TEST_ENCRYPTION_KEY,
+      mnemonic,
+      undefined, // creationBlockNumbers
+    );
+    console.log("Wallet created:");
+    console.log("Wallet ID:", walletInfo.id);
+    console.log("Railgun Address:", walletInfo.railgunAddress);
+
+    const { provider, wallet } = getProviderWallet();
+    console.log("Public Wallet Address:", wallet.address);
+
+    const balance = await provider.getBalance(wallet.address);
+    console.log("Zeta Balance:", balance.toString());
+
+    // Setup balance callbacks
+    setupBalanceCallbacks();
+
+    // Wait for balances to load
+    console.log("Waiting for balances to load...");
+    runBalancePoller([walletInfo.id]);
+    await waitForBalancesLoaded();
+
+    // Display spendable balances
+    displaySpendableBalances();
+
+    // Execute private transfer
+    await executePrivateTransfer(TEST_ENCRYPTION_KEY, walletInfo, undefined, true);
+
+    console.log("Private transfer completed successfully!");
+    process.exit(0);
+  } catch (err) {
+    console.error("Failed to execute private transfer:", err);
+    process.exit(1);
+  }
+};
+
+// Run main if this file is executed directly
+if (require.main === module) {
+  main();
+}
