@@ -120,17 +120,36 @@ pnpm dev
 
 ### 5.4 測試 (Testing)
 
-我們使用 **Vitest** 進行單元測試，覆蓋核心邏輯 (特別是跨鏈計算)。
+我們使用 **Vitest** 進行單元測試。由於本專案是 Monorepo 架構，測試指令需要透過 `pnpm` 的篩選器 (Filter) 或 `turbo` pipeline 來執行，**請勿直接在根目錄執行 `vitest` 指令，因為該套件僅安裝在 `apps/web` 工作區中。**
 
+#### 為什麼要這樣跑？
+Monorepo 將不同專案 (apps/packages) 隔離。根目錄的 `node_modules` 通常不包含子專案的開發依賴 (如 vitest)。因此我們必須告訴 pnmp "去 apps/web 裡面執行 test 指令"。
+
+#### 常用指令
+
+**1. 執行所有測試 (推薦)**
+這會透過 TurboRepo 執行整個所有工作區的測試：
 ```bash
-# 執行所有測試
 pnpm test
+```
 
-# 執行特定測試檔案
+**2. 僅執行 Web 前端的測試**
+如果您只想跑前端的測試，不跑其他 packages：
+```bash
+pnpm --filter web test
+```
+
+**3. 執行特定測試檔案 (開發時最常用)**
+如果您正在開發 Cross-Chain 功能，只想跑相關的測試：
+```bash
+# 格式: pnpm --filter <workspace_name> test -- <file_path>
 pnpm --filter web test -- lib/railgun/cross-chain-check.test.ts
 ```
 
-*注意：部分測試需要 Mock `ethers`，這在 `apps/web/__mocks__` 中處理。*
+#### Mocking 說明
+部分核心庫 (如 `ethers`) 在單元測試環境中無法直接運行 (因為涉及網路或 WASM)。
+我們在 `apps/web/__mocks__` 目錄下建立了手動 Mock：
+*   `ethers.ts`: 模擬了 Contract, Provider 與 parseUnits 等核心功能，讓測試專注於驗證業務邏輯流程。
 
 ---
 
