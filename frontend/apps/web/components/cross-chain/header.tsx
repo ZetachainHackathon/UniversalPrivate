@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@repo/ui/components/button";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { useRailgun } from "@/components/providers/railgun-provider";
+import { MnemonicExportModal } from "./mnemonic-export-modal";
 
 export function CrossChainHeader() {
     const { isConnected, address, connectWallet } = useWallet();
@@ -47,12 +48,13 @@ export function CrossChainHeader() {
                                 Copy
                             </button>
                         </div>
-                        <button
-                            onClick={() => alert("請實作匯出助記詞功能")}
-                            className="text-xs text-gray-500 underline mt-1 ml-1 hover:text-black text-left"
-                        >
-                            Export Seed/助記詞
-                        </button>
+                        <MnemonicExportModal
+                            trigger={
+                                <button className="text-xs text-gray-500 underline mt-1 ml-1 hover:text-black text-left">
+                                    Export Seed/助記詞
+                                </button>
+                            }
+                        />
                         <button
                             onClick={handleHardReset}
                             className="text-xs text-red-500 underline mt-1 ml-1 hover:text-red-700 text-left font-bold"

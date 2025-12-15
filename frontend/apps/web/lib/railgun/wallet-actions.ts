@@ -3,7 +3,8 @@ import {
   createRailgunWallet,
   loadWalletByID,
   getWalletShareableViewingKey,
-  createViewOnlyRailgunWallet
+  createViewOnlyRailgunWallet,
+  getWalletMnemonic
 } from "@railgun-community/wallet";
 import {
   NETWORK_CONFIG,
@@ -209,4 +210,24 @@ export const loadViewOnlyWallet = async (
 
   console.log("✅ 只讀錢包載入成功:", walletInfo.id);
   return walletInfo;
+};
+
+/**
+ * 匯出目前錢包的助記詞
+ * @param password 使用者密碼
+ */
+export const exportCurrentWalletMnemonic = async (password: string): Promise<string> => {
+  // 1. 取得 Wallet ID
+  const walletId = BrowserStorage.get(STORAGE_KEYS.RAILGUN_WALLET_ID);
+  if (!walletId) {
+    throw new Error("找不到錢包 ID");
+  }
+
+  // 2. 取得 Encryption Key
+  const encryptionKey = await getEncryptionKeyFromPassword(password);
+
+  // 3. 取得助記詞
+  // 注意：getWalletMnemonic 來自 @railgun-community/wallet
+  const mnemonic = await getWalletMnemonic(encryptionKey, walletId);
+  return mnemonic;
 };
