@@ -5,6 +5,7 @@ import { useEffect, useState, createContext, useContext, useCallback } from "rea
 import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
 import { useRailgunEngine } from "@/hooks/use-railgun-engine";
 import { RailgunBalancesEvent } from "@railgun-community/shared-models";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
 
 // 定義 Wallet Info 形狀
 export type RailgunWalletInfo = {
@@ -96,6 +97,16 @@ export default function RailgunProvider({
 
     return mnemonic;
   };
+
+  // 🔥 Show Loading Overlay until Engine is Ready
+  if (!isReady) {
+    return (
+      <>
+        <LoadingOverlay message="Initializing Privacy Engine..." />
+        {/* Render children hidden or just null? Render null to be safe from accessing uninitialized context */}
+      </>
+    );
+  }
 
   return (
     <RailgunContext.Provider value={{

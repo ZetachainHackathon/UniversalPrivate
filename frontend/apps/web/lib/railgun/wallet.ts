@@ -17,52 +17,79 @@ import {
 import { CONFIG } from '@/config/env';
 import { setEngineLoggers } from './logger';
 
+// Engine State Tracking
+let engineState: "IDLE" | "INITIALIZING" | "INITIALIZED" = "IDLE";
+let initializationPromise: Promise<void> | null = null;
+
 /**
  * 初始化 Railgun 引擎 (Web 版本)
+ * 多次呼叫時會回傳相同的 Promise (Idempotent)
  * @returns Promise<void> - resolves on success, rejects on failure
  */
 export const initializeEngine = async (): Promise<void> => {
-  try {
-    console.log("🚀 [Railgun] 正在初始化 Web Engine...");
-
-    setEngineLoggers();
-
-    // 0. 強制清除舊的資料庫 (已移除，確保持久化)
-    // await clearWebDatabase('railgun-web-db');
-
-    // 1. 設定
-    const walletSource = "Universal";
-    const db = createWebDatabase('railgun-web-db');
-    const shouldDebug = true;
-    const artifactStore = createWebArtifactStore();
-    const useNativeArtifacts = false;
-    const skipMerkletreeScans = false;
-    const poiNodeURLs: string[] = [
-      "https://ppoi-agg.horsewithsixlegs.xyz",
-    ];
-    const customPOILists: POIList[] = [];
-    const verboseScanLogging = true;
-
-    // 2. 啟動引擎
-    await startRailgunEngine(
-      walletSource,
-      db,
-      shouldDebug,
-      artifactStore,
-      useNativeArtifacts,
-      skipMerkletreeScans,
-      poiNodeURLs,
-      customPOILists,
-      verboseScanLogging
-    );
-
-    getProver().setSnarkJSGroth16(groth16 as unknown as SnarkJSGroth16);
-
-    console.log("✅ [Railgun] Engine 初始化成功！");
-  } catch (error) {
-    console.error("❌ [Railgun] Engine 初始化失敗:", error);
-    throw error; // Rethrow to let caller handle
+  // 1. 如果已經初始化完成，直接回傳
+  if (engineState === "INITIALIZED") {
+    console.log("✅ [Railgun] Engine 已經初始化過了，跳過。");
+    return;
   }
+
+  // 2. 如果正在初始化，回傳即使的 Promise
+  if (engineState === "INITIALIZING" && initializationPromise) {
+    console.log("⏳ [Railgun] Engine 正在初始化中，等待完成...");
+    return initializationPromise;
+  }
+
+  // 3. 開始初始化
+  engineState = "INITIALIZING";
+
+  initializationPromise = (async () => {
+    try {
+      console.log("🚀 [Railgun] 正在初始化 Web Engine...");
+
+      setEngineLoggers();
+
+      // 0. 強制清除舊的資料庫 (已移除，確保持久化)
+      // await clearWebDatabase('railgun-web-db');
+
+      // 1. 設定
+      const walletSource = "Universal";
+      const db = createWebDatabase('railgun-web-db');
+      const shouldDebug = true;
+      const artifactStore = createWebArtifactStore();
+      const useNativeArtifacts = false;
+      const skipMerkletreeScans = false;
+      const poiNodeURLs: string[] = [
+        "https://ppoi-agg.horsewithsixlegs.xyz",
+      ];
+      const customPOILists: POIList[] = [];
+      const verboseScanLogging = true;
+
+      // 2. 啟動引擎
+      await startRailgunEngine(
+        walletSource,
+        db,
+        shouldDebug,
+        artifactStore,
+        useNativeArtifacts,
+        skipMerkletreeScans,
+        poiNodeURLs,
+        customPOILists,
+        verboseScanLogging
+      );
+
+      getProver().setSnarkJSGroth16(groth16 as unknown as SnarkJSGroth16);
+
+      console.log("✅ [Railgun] Engine 初始化成功！");
+      engineState = "INITIALIZED";
+    } catch (error) {
+      console.error("❌ [Railgun] Engine 初始化失敗:", error);
+      engineState = "IDLE"; // 失敗後允許重試
+      initializationPromise = null;
+      throw error;
+    }
+  })();
+
+  return initializationPromise;
 };
 
 /**
@@ -128,5 +155,7 @@ export const loadEngineProvider = async (): Promise<void> => {
 export const stopEngine = async (): Promise<void> => {
   console.log("🛑 正在停止 Railgun Engine...");
   await stopRailgunEngine();
+  engineState = "IDLE";
+  initializationPromise = null;
   console.log("✅ Engine 已停止");
 };
