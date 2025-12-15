@@ -9,6 +9,8 @@ import { useRailgun } from "@/components/providers/railgun-provider";
 import { toast } from "@repo/ui/components/sonner";
 
 import { useConfirm } from "@/components/providers/confirm-dialog-provider";
+import { useNetworkGuard } from "@/hooks/use-network-guard";
+import { CONTENT } from "@/config/content";
 
 interface UseShieldTxProps {
     adaptAddress: string;
@@ -21,9 +23,9 @@ export const useShieldTransaction = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [txHash, setTxHash] = useState("");
 
-    const { signer, isConnected, connectWallet, checkNetwork, switchNetwork } = useWallet();
+    const { signer, isConnected, connectWallet } = useWallet();
     const { walletInfo } = useRailgun();
-    const { confirm } = useConfirm();
+    const { ensureNetwork } = useNetworkGuard();
 
     const executeShield = async ({
         adaptAddress,
@@ -34,48 +36,28 @@ export const useShieldTransaction = () => {
         // 1. 檢查 Railgun 狀態
         const railgunAddress = walletInfo?.railgunAddress;
         if (!railgunAddress) {
-            toast.error("請先解鎖 Railgun 錢包");
+            toast.error(CONTENT.ERRORS.RAILGUN_WALLET_LOCKED);
             return;
         }
 
         // 2. 檢查參數
         if (!isAddress(adaptAddress)) {
-            toast.error("合約地址格式錯誤");
+            toast.error(CONTENT.ERRORS.INVALID_CONTRACT_ADDRESS);
             return;
         }
 
         // 3. 檢查錢包連接
         if (!isConnected || !signer) {
-            try { await connectWallet(); return; } catch (e) { toast.error("連接錢包失敗"); return; }
+            try { await connectWallet(); return; } catch (e) { toast.error(CONTENT.ERRORS.WALLET_NOT_CONNECTED); return; }
         }
 
         // 4. 根據選擇的鏈進行檢查
-        if (selectedChain === "sepolia") {
-            const isSepolia = await checkNetwork(BigInt(CONFIG.CHAINS.SEPOLIA.ID_DEC));
-            if (!isSepolia) {
-                const confirmed = await confirm({
-                    title: "網路不符",
-                    description: "此操作需要在 Sepolia 網路上進行。是否切換網路？",
-                    confirmText: "切換網路"
-                });
-                if (confirmed) await switchNetwork(CONFIG.CHAINS.SEPOLIA.ID_HEX);
-                return;
-            }
-        } else if (selectedChain === "zetachain") {
-            const isZeta = await checkNetwork(BigInt(CONFIG.CHAINS.ZETACHAIN.ID_DEC));
-            if (!isZeta) {
-                const confirmed = await confirm({
-                    title: "網路不符",
-                    description: "此操作需要在 ZetaChain 網路上進行。是否切換網路？",
-                    confirmText: "切換網路"
-                });
-                if (confirmed) await switchNetwork(CONFIG.CHAINS.ZETACHAIN.ID_HEX);
-                return;
-            }
-        }
+        const targetChain = selectedChain === "sepolia" ? "sepolia" : "zetachain";
+        const isNetworkCorrect = await ensureNetwork(targetChain);
+        if (!isNetworkCorrect) return;
 
         setIsLoading(true);
-        const toastId = toast.loading("正在準備 Shield 交易...");
+        const toastId = toast.loading(CONTENT.TOASTS.PREPARING_SHIELD);
         setTxHash("");
 
         try {
@@ -107,11 +89,11 @@ export const useShieldTransaction = () => {
                 );
             }
 
-            toast.loading("交易已送出！等待上鏈...", { id: toastId });
+            toast.loading(CONTENT.TOASTS.TX_SUBMITTED_WAITING, { id: toastId });
             await tx.wait();
 
             setTxHash(tx.hash);
-            toast.success("Shield 成功！", { id: toastId });
+            toast.success(CONTENT.TOASTS.SHIELD_SUCCESS, { id: toastId });
 
             // 交易成功後，延遲 5 秒觸發一次掃描
             if (walletInfo?.id) {
@@ -123,7 +105,7 @@ export const useShieldTransaction = () => {
             }
         } catch (error: any) {
             console.error(error);
-            toast.error("交易失敗: " + (error.reason || error.message), { id: toastId });
+            toast.error(CONTENT.ERRORS.TX_FAILED + (error.reason || error.message), { id: toastId });
         } finally {
             setIsLoading(false);
         }
