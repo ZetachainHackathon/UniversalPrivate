@@ -1,0 +1,2 @@
+cd frontend
+pnpm run check-types

@@ -9,7 +9,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "postinstall": "patch-package",
-    "prepare": "husky"
+    "prepare": "cd .. && husky frontend/.husky"
   },
   "devDependencies": {
     "husky": "^9.1.7",
