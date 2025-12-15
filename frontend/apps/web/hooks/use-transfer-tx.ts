@@ -25,7 +25,7 @@ interface UseTransferTxProps {
     recipient: string;
     amount: string;
     transferType: "internal" | "cross-chain";
-    targetChain?: "sepolia" | "base-sepolia";
+    targetChain?: string;
     tokenAddress: string;
     // password: string; // Removed: Logic moved to Context
 }

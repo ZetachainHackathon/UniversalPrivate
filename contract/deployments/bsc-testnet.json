@@ -1,0 +1,17 @@
+{
+  "network": "bsc-testnet",
+  "chainId": 97,
+  "deployedAt": "2025-12-15T17:27:35.404Z",
+  "deployer": "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
+  "contracts": {
+    "EVMAdapt": {
+      "address": "0x806bF9E4A9fF5Da69540760831aF2e5360a80351",
+      "verified": false,
+      "description": "Cross-chain adapter for EVM chains to send messages to ZetaChain"
+    }
+  },
+  "externalContracts": {
+    "GatewayEVM": "0x0c487a766110c85d301d96e33579c5b317fa4995",
+    "ZetachainAdapt": "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1"
+  }
+}

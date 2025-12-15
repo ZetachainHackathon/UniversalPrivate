@@ -1,0 +1,17 @@
+{
+  "network": "arbitrum-sepolia",
+  "chainId": 421614,
+  "deployedAt": "2025-12-15T17:26:22.490Z",
+  "deployer": "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
+  "contracts": {
+    "EVMAdapt": {
+      "address": "0x806bF9E4A9fF5Da69540760831aF2e5360a80351",
+      "verified": false,
+      "description": "Cross-chain adapter for EVM chains to send messages to ZetaChain"
+    }
+  },
+  "externalContracts": {
+    "GatewayEVM": "0x0dA86Dc3F9B71F84a0E97B0e2291e50B7a5df10f",
+    "ZetachainAdapt": "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1"
+  }
+}

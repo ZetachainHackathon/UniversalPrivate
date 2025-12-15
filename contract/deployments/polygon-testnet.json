@@ -1,0 +1,17 @@
+{
+  "network": "polygon-testnet",
+  "chainId": 80002,
+  "deployedAt": "2025-12-15T17:52:14.022Z",
+  "deployer": "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
+  "contracts": {
+    "EVMAdapt": {
+      "address": "0x93D68B4C0793fF1D4D11f049F8682a1e256aC59d",
+      "verified": false,
+      "description": "Cross-chain adapter for EVM chains to send messages to ZetaChain"
+    }
+  },
+  "externalContracts": {
+    "GatewayEVM": "0x0c487a766110c85d301d96e33579c5b317fa4995",
+    "ZetachainAdapt": "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1"
+  }
+}
