@@ -132,25 +132,39 @@ export const useTransferTransaction = () => {
                 setTxHash(txResponse.hash);
             } else {
                 // Cross-Chain Transfer (0zk -> EVM)
-                // 跨鏈轉帳必須在 Zetachain 上執行
-                if (!isZetachain) {
-                    toast.error("跨鏈轉帳需要在 Zetachain 網路上執行", { id: toastId });
-                    return;
-                }
-
                 if (!targetChain) {
                     toast.error("請選擇目標鏈", { id: toastId });
                     return;
                 }
 
+                // 檢查當前鏈是否支援跨鏈轉帳
+                if (!currentChainKey) {
+                    toast.error(`不支援的鏈: ${currentChainId.toString()}`, { id: toastId });
+                    return;
+                }
+
+                // 如果在非 Zetachain 鏈上，檢查是否支援 EVMAdapt
+                if (!isZetachain) {
+                    const chainConfig = CONFIG.CHAINS[currentChainKey as keyof typeof CONFIG.CHAINS];
+                    if (!("EVM_ADAPT" in chainConfig) || !chainConfig.EVM_ADAPT) {
+                        toast.error(`鏈 ${currentChainKey} 未配置 EVMAdapt 地址，無法執行跨鏈轉帳`, { id: toastId });
+                        return;
+                    }
+                }
+
                 toast.loading(CONTENT.TOASTS.PREPARING_CROSS_CHAIN, { id: toastId });
 
+                // 根據當前連接的鏈自動選擇執行方式
+                // executeCrossChainTransfer 會根據 sourceChain 自動選擇：
+                // - 如果在 Zetachain 上：直接執行
+                // - 如果在其他 EVM 鏈上：通過 EVMAdapt 轉送到 Zetachain
                 const tx = await executeCrossChainTransfer(
                     encryptionKey, // Use Context Key
                     walletId,
                     amount, // Pass string, not bigint
                     recipient,
                     signer,
+                    currentChainKey, // 使用當前連接的鏈作為來源鏈（大寫格式，如 "SEPOLIA", "BASE_SEPOLIA", "ZETACHAIN"）
                     targetChain,
                     tokenAddress // 傳入選擇的 Token 地址
                 );

@@ -234,7 +234,7 @@ export const generateUnshieldOutsideChainData = async (
     };
 };
 
-export const executeCrossChainTransfer = async (
+export const executeCrossChainTransferOnZetaChain = async (
     password: string,
     railgunWalletId: string,
     amount: string,
@@ -291,4 +291,110 @@ export const executeCrossChainTransfer = async (
     });
 
     return tx;
+};
+
+export const executeCrossChainTransferFromEvm = async (
+    railgunWalletId: string,
+    recipientAddress: string,
+    amount: bigint,
+    tokenAddress: string,
+    password: string,
+    signer: JsonRpcSigner | Wallet,
+    sourceChain: string,
+    targetChain: "sepolia" | "base-sepolia"
+) => {
+    // 1) 產生在 Zetachain 上執行的跨鏈轉帳交易資料
+    const { to, data } = await generateUnshieldOutsideChainData(
+        password,
+        railgunWalletId,
+        amount,
+        recipientAddress,
+        signer,
+        targetChain,
+        tokenAddress
+    );
+
+    // 2) 取得來源鏈對應的 EVMAdapt 地址
+    type ChainKey = keyof typeof CONFIG.CHAINS;
+
+    if (!(sourceChain in CONFIG.CHAINS)) {
+        throw new Error(`Unknown chain: ${sourceChain}. Available chains: ${Object.keys(CONFIG.CHAINS).join(", ")}`);
+    }
+
+    const chainConfig = CONFIG.CHAINS[sourceChain as ChainKey];
+
+    // 檢查是否有 EVM_ADAPT 屬性（ZETACHAIN 沒有）
+    if (!("EVM_ADAPT" in chainConfig)) {
+        throw new Error(`Chain ${sourceChain} does not support EVMAdapt (it may be ZetaChain)`);
+    }
+
+    const evmAdaptAddress = (chainConfig as { EVM_ADAPT?: string }).EVM_ADAPT;
+    if (!evmAdaptAddress || evmAdaptAddress === "") {
+        throw new Error(`EVMAdapt address not configured for ${sourceChain}`);
+    }
+
+    // 3) 透過來源鏈的 EVMAdapt 將 unshieldOutsideChainData 轉送到 Zetachain
+    const evmAdaptContract = new Contract(
+        evmAdaptAddress,
+        EVM_ADAPT_ABI,
+        signer
+    );
+
+    console.log(`🚀 Sending Cross-Chain Transfer from ${sourceChain} to ${targetChain} via EVMAdapt...`);
+
+    const tx = await evmAdaptContract.unshieldOutsideChain!(data);
+    return tx;
+};
+
+/**
+ * 根據當前連接的鏈執行跨鏈轉帳
+ * 自動選擇適當的執行方式：
+ * - 如果在 Zetachain 上：直接執行
+ * - 如果在其他 EVM 鏈上：通過 EVMAdapt 轉送到 Zetachain
+ */
+export const executeCrossChainTransfer = async (
+    password: string,
+    railgunWalletId: string,
+    amount: string,
+    recipientAddress: string,
+    signer: JsonRpcSigner | Wallet,
+    sourceChain: string,
+    targetChain: "sepolia" | "base-sepolia",
+    tokenAddress: string
+) => {
+    // 檢查來源鏈類型（支持大寫和小寫的鏈名稱）
+    const sourceChainUpper = sourceChain.toUpperCase();
+    const isZetachain = sourceChainUpper === "ZETACHAIN" || sourceChainUpper === "ZETACHAIN_TESTNET";
+    
+    if (isZetachain) {
+        // 在 Zetachain 上直接執行
+        return await executeCrossChainTransferOnZetaChain(
+            password,
+            railgunWalletId,
+            amount,
+            recipientAddress,
+            signer,
+            targetChain,
+            tokenAddress
+        );
+    } else {
+        // 在其他 EVM 鏈上，通過 EVMAdapt 轉送到 Zetachain
+        if (!signer.provider) {
+            throw new Error("Signer must have a provider");
+        }
+        const amountBigInt = parseUnits(amount, await getTokenDecimals(tokenAddress, signer.provider));
+        
+        // 確保使用大寫的鏈 key（與 CONFIG.CHAINS 的 key 格式一致）
+        const chainKey = sourceChainUpper as keyof typeof CONFIG.CHAINS;
+        return await executeCrossChainTransferFromEvm(
+            railgunWalletId,
+            recipientAddress,
+            amountBigInt,
+            tokenAddress,
+            password,
+            signer,
+            chainKey,
+            targetChain
+        );
+    }
 };
