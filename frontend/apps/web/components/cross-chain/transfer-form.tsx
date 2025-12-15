@@ -50,7 +50,7 @@ export function TransferForm({
                 symbol: getTokenSymbol(token.tokenAddress),
                 balance: token.amount,
             }))
-            .sort((a, b) => {
+            .sort((a: { address: string; symbol: string; balance: bigint }, b: { address: string; symbol: string; balance: bigint }) => {
                 // 按餘額排序（從大到小）
                 if (b.balance > a.balance) return 1;
                 if (b.balance < a.balance) return -1;
@@ -145,7 +145,7 @@ export function TransferForm({
                     <>
                         <select
                             className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
-                            value={tokenAddress === "__other__" || (tokenAddress !== "__other__" && !tokensWithBalance.find(t => t.address === tokenAddress)) ? "__other__" : tokenAddress}
+                            value={tokenAddress === "__other__" || (tokenAddress !== "__other__" && !tokensWithBalance.find((t: { address: string; symbol: string; balance: bigint }) => t.address === tokenAddress)) ? "__other__" : tokenAddress}
                             onChange={(e) => {
                                 if (e.target.value === "__other__") {
                                     setTokenAddress("__other__");
@@ -155,7 +155,7 @@ export function TransferForm({
                                 }
                             }}
                         >
-                            {tokensWithBalance.map((token) => (
+                            {tokensWithBalance.map((token: { address: string; symbol: string; balance: bigint }) => (
                                 <option key={token.address} value={token.address}>
                                     {token.symbol} ({formatEther(token.balance).slice(0, 8)})
                                 </option>
@@ -214,7 +214,7 @@ export function TransferForm({
                             {NETWORK_CONFIG[TEST_NETWORK as NetworkName].proxyContract}
                         </p>
                     )}
-                    {tokensWithBalance.map((token) => {
+                    {tokensWithBalance.map((token: { address: string; symbol: string; balance: bigint }) => {
                         const balance = Number(formatEther(token.balance));
                         return (
                             <p key={token.address} className="text-sm text-gray-500">

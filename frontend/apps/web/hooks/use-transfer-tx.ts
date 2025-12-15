@@ -112,7 +112,7 @@ export const useTransferTransaction = () => {
 
                     // 檢查該鏈是否支援 EVMAdapt
                     const chainConfig = CONFIG.CHAINS[currentChainKey as keyof typeof CONFIG.CHAINS];
-                    if (!("EVM_ADAPT" in chainConfig) || !chainConfig.EVM_ADAPT || chainConfig.EVM_ADAPT === "") {
+                    if (!("EVM_ADAPT" in chainConfig) || !chainConfig.EVM_ADAPT) {
                         toast.error(`鏈 ${currentChainKey} 未配置 EVMAdapt 地址`, { id: toastId });
                         return;
                     }

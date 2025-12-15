@@ -37,7 +37,7 @@ export const getTokenDecimals = async (
             ["function decimals() view returns (uint8)"],
             provider
         );
-        const decimals = await erc20Contract.decimals();
+        const decimals = await erc20Contract.decimals!();
         return Number(decimals);
     } catch (error) {
         console.warn(`無法獲取 Token decimals (${tokenAddress}), 使用預設值 18:`, error);
@@ -83,4 +83,5 @@ export const getAllConfiguredTokens = (): TokenInfo[] => {
         decimals: token.decimals || 18,
     }));
 };
+
 

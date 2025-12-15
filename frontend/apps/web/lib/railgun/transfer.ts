@@ -159,6 +159,6 @@ export const executeTransferFromEvm = async (
         ],
         signer
     );
-    const tx = await evmAdaptContract.transactOnZetachain(transactData);
+    const tx = await evmAdaptContract.transactOnZetachain!(transactData);
     return tx;
 };
