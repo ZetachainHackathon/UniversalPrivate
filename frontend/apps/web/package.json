@@ -17,6 +17,7 @@
     "@repo/ui": "workspace:*",
     "bech32": "^2.0.0",
     "brotli-wasm": "^3.0.1",
+    "lucide-react": "^0.469.0",
     "next": "^16.0.7",
     "railgun-circuit-test-artifacts": "https://ipfs-lb.com/ipfs/QmPvs6Lws1MS4CTMAQ6P3WfyFpWFKGu7o6cSbWCu3vgXLW/railgun-circuit-test-artifacts-0.0.1.tgz",
     "react": "^19.2.0",
