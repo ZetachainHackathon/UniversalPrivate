@@ -24,11 +24,11 @@ export const CONFIG = {
             decimals: 18,
         },
 
-        ETH_SEPOLIA: { 
+        ETH_SEPOLIA: {
             address: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
             decimals: 18,
         },
-    },  
+    },
     CHAINS: {
         SEPOLIA: {
             ID_DEC: 11155111,
