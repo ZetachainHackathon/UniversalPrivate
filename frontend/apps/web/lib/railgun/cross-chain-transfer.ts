@@ -31,13 +31,16 @@ import {
 } from "./transaction-utils";
 import { TEST_NETWORK } from "@/constants";
 import { CONFIG } from "@/config/env";
+import { getTokenDecimals } from "./token-utils";
 
 // Contract Addresses
-const {
-    ZRC20_ETH,
-    TARGET_ZRC20,
-    ZETACHAIN_ADAPT,
-} = CONFIG.CONTRACTS;
+const ZETACHAIN_ADAPT = CONFIG.CHAINS.ZETACHAIN.ZETACHAIN_ADAPT;
+
+// Helper function to get ZRC20_GAS address based on target chain
+const getTargetZRC20 = (targetChain: "sepolia" | "base-sepolia"): string => {
+    const chainKey = targetChain === "base-sepolia" ? "BASE_SEPOLIA" : "SEPOLIA";
+    return CONFIG.CHAINS[chainKey].ZRC20_GAS;
+};
 
 // ABIs
 const ZRC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
@@ -92,7 +95,9 @@ export const generateUnshieldOutsideChainData = async (
     railgunWalletId: string,
     amount: bigint,
     recipientAddress: string,
-    signer: JsonRpcSigner | Wallet
+    signer: JsonRpcSigner | Wallet,
+    targetChain: "sepolia" | "base-sepolia",
+    tokenAddress: string
 ) => {
     const encryptionKey = await getEncryptionKeyFromPassword(password);
     const engine = getEngine();
@@ -104,6 +109,12 @@ export const generateUnshieldOutsideChainData = async (
     const unshieldFeeBasisPoints = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
     const amountAfterFee = (amount * (10000n - unshieldFeeBasisPoints)) / 10000n;
     const ZERO_ADDRESS = ZeroAddress;
+
+    // Get chain-specific addresses
+    const TARGET_ZRC20 = getTargetZRC20(targetChain);
+    // ZRC20_ETH is the ZRC20 token on ZetaChain that will be transferred to ZetachainAdapt
+    // Use the token address provided by the user
+    const ZRC20_ETH = tokenAddress;
 
     // 1. Prepare Cross-Contract Calls
     // A. Transfer ZRC20 to ZetachainAdapt
@@ -228,9 +239,16 @@ export const executeCrossChainTransfer = async (
     railgunWalletId: string,
     amount: string,
     recipientAddress: string,
-    signer: JsonRpcSigner | Wallet
+    signer: JsonRpcSigner | Wallet,
+    targetChain: "sepolia" | "base-sepolia",
+    tokenAddress: string
 ) => {
-    const amountBigInt = parseUnits(amount, 18);
+    // 獲取 Token decimals
+    if (!signer.provider) {
+        throw new Error("無法獲取 Provider");
+    }
+    const decimals = await getTokenDecimals(tokenAddress, signer.provider);
+    const amountBigInt = parseUnits(amount, decimals);
 
     // 1. Generate the transaction data
     const { to, data } = await generateUnshieldOutsideChainData(
@@ -238,7 +256,9 @@ export const executeCrossChainTransfer = async (
         railgunWalletId,
         amountBigInt,
         recipientAddress,
-        signer
+        signer,
+        targetChain,
+        tokenAddress
     );
 
     // 2. Send Transaction directly to Railgun Proxy

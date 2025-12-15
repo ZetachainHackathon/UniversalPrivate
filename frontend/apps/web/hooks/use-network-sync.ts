@@ -22,6 +22,8 @@ export const useNetworkSync = (
                         setSelectedChain("sepolia");
                     } else if (chainId === BigInt(CONFIG.CHAINS.ZETACHAIN.ID_DEC) && selectedChain !== "zetachain") {
                         setSelectedChain("zetachain");
+                    } else if (chainId === BigInt(CONFIG.CHAINS.BASE_SEPOLIA.ID_DEC) && selectedChain !== "base-sepolia") {
+                        setSelectedChain("base-sepolia");
                     }
                 } catch (e: any) {
                     if (e.code !== 'NETWORK_ERROR') {

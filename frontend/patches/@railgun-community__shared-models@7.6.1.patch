@@ -13,7 +13,7 @@ index d063637dedb51cee73d66eb25f5e0d8eeb21086d..2eb5cbc308dea1f73608d154d94c9ac9
  export type FeesSerialized = {
      shieldFeeV2: string;
 diff --git a/dist/models/network-config.js b/dist/models/network-config.js
-index b8277322a10eb80c44f6ecbad2a14957a6690319..e2c7003aaa412cd035cbad9da91512f6c90602fa 100644
+index b8277322a10eb80c44f6ecbad2a14957a6690319..93ff6f3e114cc181654621dd4e8583202fddaa4f 100644
 --- a/dist/models/network-config.js
 +++ b/dist/models/network-config.js
 @@ -17,6 +17,8 @@ var NetworkName;
@@ -30,7 +30,7 @@ index b8277322a10eb80c44f6ecbad2a14957a6690319..e2c7003aaa412cd035cbad9da91512f6
      // Dev only
      [NetworkName.Hardhat]: '0x610178dA211FEF7D417bC0e6FeD39F05609AD788',
 +    // Zetachain Testnet
-+    [NetworkName.ZetachainTestnet]: '0x4ddEcd02F0dE96402f27abF235c8d12a4dD53bd5',
++    [NetworkName.ZetachainTestnet]: '0xB83794561B552Ff37B3225F9190B07beDBA6Ce90',
      // Deprecated
      [NetworkName.EthereumRopsten_DEPRECATED]: '',
      [NetworkName.EthereumGoerli_DEPRECATED]: '',
@@ -39,7 +39,7 @@ index b8277322a10eb80c44f6ecbad2a14957a6690319..e2c7003aaa412cd035cbad9da91512f6
      // Dev only
      [NetworkName.Hardhat]: '0x0355B7B8cb128fA5692729Ab3AAa199C1753f726',
 +    // Zetachain Testnet
-+    [NetworkName.ZetachainTestnet]: '0x9F5D2C429217b385355fC495DcA958e998a0b0Db',
++    [NetworkName.ZetachainTestnet]: '0xA184103178EFA1835B35D787D4b1ADD68062662a',
      // Deprecated
      [NetworkName.EthereumRopsten_DEPRECATED]: '',
      [NetworkName.EthereumGoerli_DEPRECATED]: '',

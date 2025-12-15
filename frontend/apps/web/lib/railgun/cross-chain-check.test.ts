@@ -33,8 +33,10 @@ describe('Cross-Chain Transfer Logic', () => {
         const amount = 1000000n; // 1000000 units
         const recipient = '0x123';
         const signer = { provider: {} } as any; // Mock signer with provider
+        const targetChain = 'sepolia' as const;
+        const tokenAddress = CONFIG.TOKENS.ETH_SEPOLIA.address;
 
-        const data = await generateUnshieldOutsideChainData(password, railgunWalletId, amount, recipient, signer);
+        const data = await generateUnshieldOutsideChainData(password, railgunWalletId, amount, recipient, signer, targetChain, tokenAddress);
 
         // Validation 1: Check Config usage
         const feeBps = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
@@ -46,10 +48,10 @@ describe('Cross-Chain Transfer Logic', () => {
 
         // Validation 3: Verify Arguments for Transfer (ZRC20 -> Adapt)
         expect(mockPopulateTransaction).toHaveBeenCalledWith(
-            CONFIG.CONTRACTS.ZETACHAIN_ADAPT,
+            CONFIG.CHAINS.ZETACHAIN.ZETACHAIN_ADAPT,
             expectedAmount
         );
 
-        expect(data).toBe('0xmockeddata');
+        expect(data.data).toBe('0xmockeddata');
     });
 });

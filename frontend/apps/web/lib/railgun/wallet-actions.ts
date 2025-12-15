@@ -25,9 +25,9 @@ import { stopEngine, initializeEngine, loadEngineProvider } from "./wallet";
  */
 const getCreationBlockMap = () => {
   // @ts-ignore
-  const { deploymentBlock } = NETWORK_CONFIG[CONFIG.NETWORK.NAME];
+  const { deploymentBlock } = NETWORK_CONFIG[CONFIG.RAILGUN_NETWORK.NAME];
   return {
-    [CONFIG.NETWORK.NAME]: deploymentBlock ?? 0,
+    [CONFIG.RAILGUN_NETWORK.NAME]: deploymentBlock ?? 0,
   };
 };
 
