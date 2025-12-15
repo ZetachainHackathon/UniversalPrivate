@@ -58,30 +58,22 @@ export function TransferForm({
             });
     }, [balances]);
 
-    // 處理其他 Token 輸入
-    const [customTokenAddress, setCustomTokenAddress] = useState("");
-
     // 獲取當前選擇的 Token 信息
     const selectedToken = useMemo(() => {
-        const actualAddress = tokenAddress === "__other__" ? customTokenAddress : tokenAddress;
-        
-        if (!actualAddress || actualAddress === ZeroAddress || actualAddress === "") {
+        if (!tokenAddress || tokenAddress === ZeroAddress || tokenAddress === "") {
             return { symbol: "WZETA", address: ZeroAddress };
         }
         
         return {
-            symbol: getTokenSymbol(actualAddress),
-            address: actualAddress,
+            symbol: getTokenSymbol(tokenAddress),
+            address: tokenAddress,
         };
-    }, [tokenAddress, customTokenAddress]);
+    }, [tokenAddress]);
 
     // 當有餘額時，自動設置第一個 Token 為預設值（僅在初始化時）
     useEffect(() => {
         if (tokensWithBalance.length > 0 && (tokenAddress === ZeroAddress || tokenAddress === "")) {
             setTokenAddress(tokensWithBalance[0].address);
-        } else if (tokensWithBalance.length === 0 && tokenAddress === ZeroAddress) {
-            // 如果沒有餘額，設置為 "__other__" 以便顯示輸入框
-            setTokenAddress("__other__");
         }
     }, [tokensWithBalance.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -142,52 +134,23 @@ export function TransferForm({
             <div className="space-y-2">
                 <label className="font-bold">選擇代幣 (Select Token)</label>
                 {tokensWithBalance.length > 0 ? (
-                    <>
-                        <select
-                            className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
-                            value={tokenAddress === "__other__" || (tokenAddress !== "__other__" && !tokensWithBalance.find((t: { address: string; symbol: string; balance: bigint }) => t.address === tokenAddress)) ? "__other__" : tokenAddress}
-                            onChange={(e) => {
-                                if (e.target.value === "__other__") {
-                                    setTokenAddress("__other__");
-                                } else {
-                                    setTokenAddress(e.target.value);
-                                    setCustomTokenAddress(""); // 清除自定義地址
-                                }
-                            }}
-                        >
-                            {tokensWithBalance.map((token: { address: string; symbol: string; balance: bigint }) => (
-                                <option key={token.address} value={token.address}>
-                                    {token.symbol} ({formatEther(token.balance).slice(0, 8)})
-                                </option>
-                            ))}
-                            <option value="__other__">其他 Token (手動輸入地址)</option>
-                        </select>
-                    </>
-                ) : (
-                    <div className="p-3 border-2 border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500 mb-2">
-                        沒有可用的 Token 餘額，請手動輸入 Token 地址
-                    </div>
-                )}
-                
-                {(tokenAddress === "__other__" || (tokensWithBalance.length === 0)) && (
-                    <input
-                        type="text"
-                        placeholder="輸入 Token 地址 (0x...)"
-                        className="w-full p-3 border-2 border-black rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
-                        value={customTokenAddress}
+                    <select
+                        className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
+                        value={tokenAddress && tokensWithBalance.find((t: { address: string; symbol: string; balance: bigint }) => t.address === tokenAddress) ? tokenAddress : tokensWithBalance[0]?.address || ""}
                         onChange={(e) => {
-                            const addr = e.target.value.trim();
-                            setCustomTokenAddress(addr);
-                            if (addr.startsWith("0x") && addr.length === 42) {
-                                setTokenAddress(addr);
-                            } else if (tokensWithBalance.length === 0) {
-                                // 如果沒有餘額，直接使用輸入的地址（即使不完整）
-                                setTokenAddress(addr || "__other__");
-                            } else if (tokenAddress !== "__other__") {
-                                setTokenAddress("__other__");
-                            }
+                            setTokenAddress(e.target.value);
                         }}
-                    />
+                    >
+                        {tokensWithBalance.map((token: { address: string; symbol: string; balance: bigint }) => (
+                            <option key={token.address} value={token.address}>
+                                {token.symbol} ({formatEther(token.balance).slice(0, 8)})
+                            </option>
+                        ))}
+                    </select>
+                ) : (
+                    <div className="p-3 border-2 border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500">
+                        沒有可用的 Token 餘額
+                    </div>
                 )}
             </div>
 
