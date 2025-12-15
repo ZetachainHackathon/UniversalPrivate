@@ -73,7 +73,7 @@ export const useTransferTransaction = () => {
 
         try {
         // 驗證 tokenAddress
-        if (!tokenAddress || tokenAddress === "__other__") {
+        if (!tokenAddress || tokenAddress === ZeroAddress || tokenAddress === "") {
             toast.error("請選擇有效的 Token", { id: toastId });
             return;
         }
