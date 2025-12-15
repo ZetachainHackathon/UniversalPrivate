@@ -53,7 +53,7 @@ export const setupBalanceListeners = (
  */
 export const triggerBalanceRefresh = async (walletId: string) => {
   // @ts-ignore
-  const chain = NETWORK_CONFIG[CONFIG.NETWORK.NAME].chain;
+  const chain = NETWORK_CONFIG[CONFIG.RAILGUN_NETWORK.NAME].chain;
   console.log("🔄 開始掃描餘額...", chain);
 
   try {
@@ -71,7 +71,7 @@ export const triggerBalanceRefresh = async (walletId: string) => {
  */
 export const triggerFullRescan = async (walletId: string) => {
   // @ts-ignore
-  const chain = NETWORK_CONFIG[CONFIG.NETWORK.NAME].chain;
+  const chain = NETWORK_CONFIG[CONFIG.RAILGUN_NETWORK.NAME].chain;
   console.log("⚠️ 執行強制掃描 (Full Rescan)...", chain);
 
   try {

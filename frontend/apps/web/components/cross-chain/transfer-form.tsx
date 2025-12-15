@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@repo/ui/components/button";
-import { formatEther, ZeroAddress } from "ethers";
+import { formatEther, ZeroAddress, formatUnits } from "ethers";
 import { NETWORK_CONFIG, NetworkName } from "@railgun-community/shared-models";
 import { TEST_NETWORK } from "@/constants";
+import { CONFIG } from "@/config/env";
+import { getTokenSymbol, getAllConfiguredTokens, type TokenInfo } from "@/lib/railgun/token-utils";
 
 interface TransferFormProps {
     transferType: "internal" | "cross-chain";
@@ -12,10 +14,13 @@ interface TransferFormProps {
     amount: string;
     setAmount: (amount: string) => void;
     tokenAddress: string;
+    setTokenAddress: (address: string) => void;
     railgunAddress: string;
     balances: any;
     handleTransfer: () => void;
     isLoading: boolean;
+    targetChain: "sepolia" | "base-sepolia";
+    setTargetChain: (chain: "sepolia" | "base-sepolia") => void;
 }
 
 export function TransferForm({
@@ -26,11 +31,59 @@ export function TransferForm({
     amount,
     setAmount,
     tokenAddress,
+    setTokenAddress,
     railgunAddress,
     balances,
     handleTransfer,
     isLoading,
+    targetChain,
+    setTargetChain,
 }: TransferFormProps) {
+    // 獲取有餘額的 Token 列表
+    const tokensWithBalance = useMemo(() => {
+        if (!balances?.erc20Amounts) return [];
+        
+        return balances.erc20Amounts
+            .filter((token: any) => token.amount > 0n)
+            .map((token: any) => ({
+                address: token.tokenAddress,
+                symbol: getTokenSymbol(token.tokenAddress),
+                balance: token.amount,
+            }))
+            .sort((a, b) => {
+                // 按餘額排序（從大到小）
+                if (b.balance > a.balance) return 1;
+                if (b.balance < a.balance) return -1;
+                return 0;
+            });
+    }, [balances]);
+
+    // 處理其他 Token 輸入
+    const [customTokenAddress, setCustomTokenAddress] = useState("");
+
+    // 獲取當前選擇的 Token 信息
+    const selectedToken = useMemo(() => {
+        const actualAddress = tokenAddress === "__other__" ? customTokenAddress : tokenAddress;
+        
+        if (!actualAddress || actualAddress === ZeroAddress || actualAddress === "") {
+            return { symbol: "WZETA", address: ZeroAddress };
+        }
+        
+        return {
+            symbol: getTokenSymbol(actualAddress),
+            address: actualAddress,
+        };
+    }, [tokenAddress, customTokenAddress]);
+
+    // 當有餘額時，自動設置第一個 Token 為預設值（僅在初始化時）
+    useEffect(() => {
+        if (tokensWithBalance.length > 0 && (tokenAddress === ZeroAddress || tokenAddress === "")) {
+            setTokenAddress(tokensWithBalance[0].address);
+        } else if (tokensWithBalance.length === 0 && tokenAddress === ZeroAddress) {
+            // 如果沒有餘額，設置為 "__other__" 以便顯示輸入框
+            setTokenAddress("__other__");
+        }
+    }, [tokensWithBalance.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div className="space-y-4">
@@ -62,13 +115,12 @@ export function TransferForm({
                     <label className="font-bold">目標鏈 (Target Chain)</label>
                     <select
                         className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
-                        disabled
+                        value={targetChain}
+                        onChange={(e) => setTargetChain(e.target.value as "sepolia" | "base-sepolia")}
                     >
-                        <option value="zetachain">ZetaChain Testnet</option>
+                        <option value="sepolia">Sepolia Testnet</option>
+                        <option value="base-sepolia">Base Sepolia</option>
                     </select>
-                    <p className="text-xs text-gray-500">
-                        目前僅支援 Sepolia -&gt; ZetaChain
-                    </p>
                 </div>
             )}
 
@@ -88,16 +140,69 @@ export function TransferForm({
             </div>
 
             <div className="space-y-2">
+                <label className="font-bold">選擇代幣 (Select Token)</label>
+                {tokensWithBalance.length > 0 ? (
+                    <>
+                        <select
+                            className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
+                            value={tokenAddress === "__other__" || (tokenAddress !== "__other__" && !tokensWithBalance.find(t => t.address === tokenAddress)) ? "__other__" : tokenAddress}
+                            onChange={(e) => {
+                                if (e.target.value === "__other__") {
+                                    setTokenAddress("__other__");
+                                } else {
+                                    setTokenAddress(e.target.value);
+                                    setCustomTokenAddress(""); // 清除自定義地址
+                                }
+                            }}
+                        >
+                            {tokensWithBalance.map((token) => (
+                                <option key={token.address} value={token.address}>
+                                    {token.symbol} ({formatEther(token.balance).slice(0, 8)})
+                                </option>
+                            ))}
+                            <option value="__other__">其他 Token (手動輸入地址)</option>
+                        </select>
+                    </>
+                ) : (
+                    <div className="p-3 border-2 border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500 mb-2">
+                        沒有可用的 Token 餘額，請手動輸入 Token 地址
+                    </div>
+                )}
+                
+                {(tokenAddress === "__other__" || (tokensWithBalance.length === 0)) && (
+                    <input
+                        type="text"
+                        placeholder="輸入 Token 地址 (0x...)"
+                        className="w-full p-3 border-2 border-black rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
+                        value={customTokenAddress}
+                        onChange={(e) => {
+                            const addr = e.target.value.trim();
+                            setCustomTokenAddress(addr);
+                            if (addr.startsWith("0x") && addr.length === 42) {
+                                setTokenAddress(addr);
+                            } else if (tokensWithBalance.length === 0) {
+                                // 如果沒有餘額，直接使用輸入的地址（即使不完整）
+                                setTokenAddress(addr || "__other__");
+                            } else if (tokenAddress !== "__other__") {
+                                setTokenAddress("__other__");
+                            }
+                        }}
+                    />
+                )}
+            </div>
+
+            <div className="space-y-2">
                 <label className="font-bold">金額 (Amount)</label>
                 <div className="relative">
                     <input
                         type="number"
+                        step="any"
                         className="w-full p-4 border-2 border-black rounded-lg text-xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">
-                        {tokenAddress === ZeroAddress ? "ETH" : "ERC20"}
+                        {selectedToken.symbol}
                     </span>
                 </div>
 
@@ -109,17 +214,11 @@ export function TransferForm({
                             {NETWORK_CONFIG[TEST_NETWORK as NetworkName].proxyContract}
                         </p>
                     )}
-                    {balances?.erc20Amounts.map((token: any) => {
-                        const isEth =
-                            token.tokenAddress.toLowerCase() === ZeroAddress.toLowerCase();
-                        const symbol = isEth
-                            ? "ETH"
-                            : `Token (${token.tokenAddress.slice(0, 6)}...)`;
-                        // 只顯示大於 0 的餘額
-                        if (token.amount === 0n) return null;
+                    {tokensWithBalance.map((token) => {
+                        const balance = Number(formatEther(token.balance));
                         return (
-                            <p key={token.tokenAddress} className="text-sm text-gray-500">
-                                {Number(formatEther(token.amount)).toFixed(4)} {symbol}
+                            <p key={token.address} className="text-sm text-gray-500">
+                                {balance.toFixed(4)} {token.symbol}
                             </p>
                         );
                     })}

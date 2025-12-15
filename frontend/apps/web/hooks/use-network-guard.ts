@@ -12,7 +12,7 @@ export const useNetworkGuard = () => {
     const { checkNetwork, switchNetwork } = useWallet();
     const { confirm } = useConfirm();
 
-    const ensureNetwork = useCallback(async (requiredChainName: "sepolia" | "zetachain"): Promise<boolean> => {
+    const ensureNetwork = useCallback(async (requiredChainName: "sepolia" | "zetachain" | "base-sepolia"): Promise<boolean> => {
         let requiredIdDec: bigint;
         let requiredIdHex: string;
         let confirmMessage: string;
@@ -21,6 +21,10 @@ export const useNetworkGuard = () => {
             requiredIdDec = BigInt(CONFIG.CHAINS.SEPOLIA.ID_DEC);
             requiredIdHex = CONFIG.CHAINS.SEPOLIA.ID_HEX;
             confirmMessage = CONTENT.WARNINGS.SWITCH_NETWORK_SEPOLIA;
+        } else if (requiredChainName === "base-sepolia") {
+            requiredIdDec = BigInt(CONFIG.CHAINS.BASE_SEPOLIA.ID_DEC);
+            requiredIdHex = CONFIG.CHAINS.BASE_SEPOLIA.ID_HEX;
+            confirmMessage = CONTENT.WARNINGS.SWITCH_NETWORK_BASE_SEPOLIA;
         } else {
             requiredIdDec = BigInt(CONFIG.CHAINS.ZETACHAIN.ID_DEC);
             requiredIdHex = CONFIG.CHAINS.ZETACHAIN.ID_HEX;

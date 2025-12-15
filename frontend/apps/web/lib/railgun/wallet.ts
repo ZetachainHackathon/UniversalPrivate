@@ -110,7 +110,7 @@ const getProviderInfo = (providerUrl: string) => {
  */
 export const loadEngineProvider = async (): Promise<void> => {
   try {
-    const { NAME, RPC_URL, CHAIN_ID } = CONFIG.NETWORK;
+    const { NAME, RPC_URL, CHAIN_ID } = CONFIG.RAILGUN_NETWORK;
     console.log(`🚀 [Railgun] 正在連接網路: ${NAME}`);
 
     // 1. 建構設定檔

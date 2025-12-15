@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/ta
 import { CONFIG } from "@/config/env";
 
 // 預設值 (Sepolia)
-const DEFAULT_ADAPT_ADDRESS = CONFIG.CONTRACTS.DEFAULT_ADAPT;
+const DEFAULT_ADAPT_ADDRESS = CONFIG.CHAINS.SEPOLIA.EVM_ADAPT;
 const DEFAULT_TOKEN_ADDRESS = ZeroAddress; // 預設使用原生代幣 (ETH)
 
 export default function CrossChainPage() {
@@ -36,11 +36,13 @@ export default function CrossChainPage() {
   const walletId = walletInfo?.id || "";
 
   const [adaptAddress, setAdaptAddress] = useState(DEFAULT_ADAPT_ADDRESS);
+  // tokenAddress 初始值會在 TransferForm 中根據餘額自動設置
   const [tokenAddress, setTokenAddress] = useState(DEFAULT_TOKEN_ADDRESS);
   const [selectedChain, setSelectedChain] = useState("sepolia");
   const [amount, setAmount] = useState("0.01");
   const [recipient, setRecipient] = useState(""); // For Transfer
   const [transferType, setTransferType] = useState<"internal" | "cross-chain">("internal");
+  const [targetChain, setTargetChain] = useState<"sepolia" | "base-sepolia">("sepolia");
 
 
   // Hooks (Phase 2 Smart Hooks + Phase 3 Toast)
@@ -89,6 +91,9 @@ export default function CrossChainPage() {
       } else if (chain === "zetachain") {
         const isZeta = await checkNetwork(BigInt(CONFIG.CHAINS.ZETACHAIN.ID_DEC));
         if (!isZeta) await switchNetwork(CONFIG.CHAINS.ZETACHAIN.ID_HEX);
+      } else if (chain === "base-sepolia") {
+        const isBaseSepolia = await checkNetwork(BigInt(CONFIG.CHAINS.BASE_SEPOLIA.ID_DEC));
+        if (!isBaseSepolia) await switchNetwork(CONFIG.CHAINS.BASE_SEPOLIA.ID_HEX);
       }
     } catch (e) {
       console.error("切換網路失敗:", e);
@@ -112,6 +117,8 @@ export default function CrossChainPage() {
       recipient,
       amount,
       transferType,
+      targetChain: transferType === "cross-chain" ? targetChain : undefined,
+      tokenAddress,
     });
   };
 
@@ -164,10 +171,13 @@ export default function CrossChainPage() {
                 amount={amount}
                 setAmount={setAmount}
                 tokenAddress={tokenAddress}
+                setTokenAddress={setTokenAddress}
                 railgunAddress={railgunAddress}
                 balances={balances}
                 handleTransfer={handleTransfer}
                 isLoading={isLoading}
+                targetChain={targetChain}
+                setTargetChain={setTargetChain}
               />
             </TabsContent>
           </Tabs>

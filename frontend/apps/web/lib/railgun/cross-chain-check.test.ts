@@ -46,7 +46,7 @@ describe('Cross-Chain Transfer Logic', () => {
 
         // Validation 3: Verify Arguments for Transfer (ZRC20 -> Adapt)
         expect(mockPopulateTransaction).toHaveBeenCalledWith(
-            CONFIG.CONTRACTS.ZETACHAIN_ADAPT,
+            CONFIG.CHAINS.ZETACHAIN.ZETACHAIN_ADAPT,
             expectedAmount
         );
 

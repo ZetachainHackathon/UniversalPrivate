@@ -1,33 +1,54 @@
 import { NetworkName } from "@railgun-community/shared-models";
 
 export const CONFIG = {
-    NETWORK: {
-        NAME: (process.env.NEXT_PUBLIC_NETWORK_NAME || NetworkName.ZetachainTestnet) as NetworkName,
-        RPC_URL: process.env.NEXT_PUBLIC_RPC_URL || "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
-        CHAIN_ID: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 7001),
+    RAILGUN_NETWORK: {
+        NAME: NetworkName.ZetachainTestnet,
+        RPC_URL:  "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+        CHAIN_ID: 7001,
     },
     CONTRACTS: {
-        // defaults can be placeholders if real env vars are preferred
-        ZETA_ADAPT: process.env.NEXT_PUBLIC_ZETA_ADAPT_ADDRESS || "",
-        RAILGUN: process.env.NEXT_PUBLIC_RAILGUN_PROXY_ADDRESS || "",
         TEST_ERC20: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
-        DEFAULT_ADAPT: "0xc32AfcB92B92886ca08d288280127d5F1A535AaF", // Sepolia EVMAdapt
-        ZETACHAIN_ADAPT: "0xFaf96D14d74Ee9030d89d5FD2eB479340F32843E",
-        ZRC20_ETH: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
-        TARGET_ZRC20: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
     },
+    TOKENS: {
+        // ZRC-20 Tokens on ZetaChain Testnet
+        // Format: SYMBOL: { address, decimals (optional, will be fetched from contract if not provided) }
+        WZETA: {
+            address: "0x5F0b1a82749cb4E2278EC87F8BF6B618dC71a8bf", // WZETA on ZetaChain
+            decimals: 18,
+        },
+        // Add more tokens as needed
+        // USDT: { address: "...", decimals: 6 },
+        // USDC: { address: "...", decimals: 6 },
+        ETH_BASE_SEPOLIA: {
+            address: "0x236b0DE675cC8F46AE186897fCCeFe3370C9eDeD",
+            decimals: 18,
+        },
+
+        ETH_SEPOLIA: { 
+            address: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
+            decimals: 18,
+        },
+    },  
     CHAINS: {
         SEPOLIA: {
             ID_DEC: 11155111,
             ID_HEX: "0xaa36a7",
+            EVM_ADAPT: "0x7bE4f15d073611A13A9C3C123500Ae445F546246",
+            ZRC20_GAS: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
         },
         ZETACHAIN: {
             ID_DEC: 7001,
             ID_HEX: "0x1b59",
+            ZETACHAIN_ADAPT: "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1"
+        },
+        BASE_SEPOLIA: {
+            ID_DEC: 84532,
+            ID_HEX: "0x14a34",
+            EVM_ADAPT: "0x7bE4f15d073611A13A9C3C123500Ae445F546246",
+            ZRC20_GAS: "0x236b0DE675cC8F46AE186897fCCeFe3370C9eDeD",
         }
     },
     FEES: {
-        CROSS_CHAIN: 100000000000000n, // 0.0001 ETH
         UNSHIELD_BASIS_POINTS: 25n,
     },
     GAS: {

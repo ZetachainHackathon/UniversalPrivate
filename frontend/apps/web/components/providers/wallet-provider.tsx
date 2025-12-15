@@ -11,6 +11,7 @@ interface WalletContextType {
   connectWallet: () => Promise<void>;
   checkNetwork: (chainId: bigint) => Promise<boolean>;
   switchNetwork: (chainIdHex: string) => Promise<void>;
+  getCurrentChainId: () => Promise<bigint | null>;
 }
 
 const WalletContext = createContext<WalletContextType>({} as WalletContextType);
@@ -67,6 +68,17 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getCurrentChainId = async (): Promise<bigint | null> => {
+    if (!signer || !signer.provider) return null;
+    try {
+      const network = await signer.provider.getNetwork();
+      return network.chainId;
+    } catch (error) {
+      console.error("獲取當前鏈 ID 失敗:", error);
+      return null;
+    }
+  };
+
   // 監聽帳號切換
   useEffect(() => {
     if ((window as any).ethereum) {
@@ -104,7 +116,8 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
       balance, 
       connectWallet, 
       checkNetwork,
-      switchNetwork // 👈 記得導出
+      switchNetwork,
+      getCurrentChainId
     }}>
       {children}
     </WalletContext.Provider>

@@ -10,6 +10,7 @@ export const CONTENT = {
         WRONG_NETWORK: "網路不符",
         SWITCH_NETWORK_SEPOLIA: "此操作需要在 Sepolia 網路上進行。是否切換網路？",
         SWITCH_NETWORK_ZETACHAIN: "此操作需要在 ZetaChain 網路上進行。是否切換網路？",
+        SWITCH_NETWORK_BASE_SEPOLIA: "此操作需要在 Base Sepolia 網路上進行。是否切換網路？",
     },
     ACTIONS: {
         SWITCH_NETWORK: "切換網路",
