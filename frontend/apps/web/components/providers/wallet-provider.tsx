@@ -2,12 +2,15 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { BrowserProvider, JsonRpcSigner, formatEther } from "ethers";
+import { CONFIG } from "@/config/env";
 
 interface WalletContextType {
   isConnected: boolean;
   address: string | null;
   signer: JsonRpcSigner | null;
   balance: string; // ETH balance
+  currentChainId: bigint | null;
+  currentChainName: string | null;
   connectWallet: () => Promise<void>;
   checkNetwork: (chainId: bigint) => Promise<boolean>;
   switchNetwork: (chainIdHex: string) => Promise<void>;
@@ -23,9 +26,42 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null);
   const [balance, setBalance] = useState("0");
+  const [currentChainId, setCurrentChainId] = useState<bigint | null>(null);
+  const [currentChainName, setCurrentChainName] = useState<string | null>(null);
+
+  // 根據 ChainId 獲取鏈名稱
+  const getChainNameById = (chainId: bigint): string | null => {
+    for (const [key, chain] of Object.entries(CONFIG.CHAINS)) {
+      if (BigInt(chain.ID_DEC) === chainId) {
+        return key;
+      }
+    }
+    return null;
+  };
+
+  // 更新當前鏈信息
+  const updateCurrentChain = async () => {
+    if (!signer || !signer.provider) {
+      setCurrentChainId(null);
+      setCurrentChainName(null);
+      return;
+    }
+    try {
+      const network = await signer.provider.getNetwork();
+      setCurrentChainId(network.chainId);
+      const chainName = getChainNameById(network.chainId);
+      setCurrentChainName(chainName);
+    } catch (error) {
+      console.error("獲取當前鏈信息失敗:", error);
+      setCurrentChainId(null);
+      setCurrentChainName(null);
+    }
+  };
 
   const connectWallet = async () => {
+
     if (!(window as any).ethereum) {
+
       alert("請安裝 MetaMask!");
       return;
     }
@@ -40,6 +76,7 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
       setAddress(_address);
       setBalance(formatEther(_balance));
       setIsConnected(true);
+      await updateCurrentChain();
     } catch (error) {
       console.error("連接錢包失敗:", error);
     }
@@ -94,6 +131,7 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
 
       const handleChainChanged = async () => {
         await connectWallet();
+        await updateCurrentChain();
       };
 
       (window as any).ethereum.on("accountsChanged", handleAccountsChanged);
@@ -108,12 +146,24 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 初始化時更新鏈信息
+  useEffect(() => {
+    if (isConnected && signer) {
+      updateCurrentChain();
+    } else {
+      setCurrentChainId(null);
+      setCurrentChainName(null);
+    }
+  }, [isConnected, signer]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <WalletContext.Provider value={{ 
       isConnected, 
       address, 
       signer, 
-      balance, 
+      balance,
+      currentChainId,
+      currentChainName,
       connectWallet, 
       checkNetwork,
       switchNetwork,

@@ -1,6 +1,8 @@
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@repo/ui/components/button";
 import { CONFIG } from "@/config/env";
 import { ZeroAddress } from "ethers";
+import { getTokenLogoUrl } from "@/lib/railgun/token-utils";
 
 interface ShieldFormProps {
     selectedChain: string;
@@ -25,32 +27,193 @@ export function ShieldForm({
     handleShield,
     isLoading,
 }: ShieldFormProps) {
+    const [showChainMenu, setShowChainMenu] = useState(false);
+    const [showTokenMenu, setShowTokenMenu] = useState(false);
+    const chainMenuRef = useRef<HTMLDivElement>(null);
+    const tokenMenuRef = useRef<HTMLDivElement>(null);
+
+    // 可用的鏈列表
+    const availableChains = [
+        { value: "sepolia", name: "Sepolia Testnet", key: "SEPOLIA" },
+        { value: "zetachain", name: "ZetaChain Testnet", key: "ZETACHAIN" },
+    ];
+
+    // 獲取當前鏈的 LOGO
+    const getChainLogo = (chain: string) => {
+        const chainKey = chain === "sepolia" ? "SEPOLIA" : "ZETACHAIN";
+        if (chainKey in CONFIG.CHAINS) {
+            const chainConfig = CONFIG.CHAINS[chainKey as keyof typeof CONFIG.CHAINS];
+            return "CHAIN_LOGO" in chainConfig ? chainConfig.CHAIN_LOGO : null;
+        }
+        return null;
+    };
+
+    // 獲取當前 Token 的 LOGO
+    const getTokenLogo = () => {
+        if (tokenAddress === ZeroAddress) {
+            // Native Token
+            if (selectedChain === "sepolia") {
+                return CONFIG.CHAINS.SEPOLIA.CHAIN_LOGO;
+            } else {
+                return CONFIG.CHAINS.ZETACHAIN.CHAIN_LOGO;
+            }
+        } else {
+            return getTokenLogoUrl(tokenAddress);
+        }
+    };
+
+    // 點擊外部關閉選單
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (chainMenuRef.current && !chainMenuRef.current.contains(event.target as Node)) {
+                setShowChainMenu(false);
+            }
+            if (tokenMenuRef.current && !tokenMenuRef.current.contains(event.target as Node)) {
+                setShowTokenMenu(false);
+            }
+        };
+
+        if (showChainMenu || showTokenMenu) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showChainMenu, showTokenMenu]);
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <label className="font-bold">選擇鏈 (Chain)</label>
-                    <select
-                        className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
-                        value={selectedChain}
-                        onChange={(e) => handleChainChange(e.target.value)}
-                    >
-                        <option value="sepolia">Sepolia Testnet</option>
-                        <option value="zetachain">ZetaChain Testnet</option>
-                    </select>
+                    <div className="relative" ref={chainMenuRef}>
+                        <button
+                            type="button"
+                            onClick={() => setShowChainMenu(!showChainMenu)}
+                            className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium flex items-center gap-2 hover:bg-gray-100 transition-colors"
+                        >
+                            {getChainLogo(selectedChain) && (
+                                <img 
+                                    src={getChainLogo(selectedChain)!} 
+                                    alt={availableChains.find(c => c.value === selectedChain)?.name || ""}
+                                    className="w-5 h-5 rounded-full"
+                                />
+                            )}
+                            <span className="flex-1 text-left">
+                                {availableChains.find(c => c.value === selectedChain)?.name || selectedChain}
+                            </span>
+                            <span className="text-gray-400">▼</span>
+                        </button>
+                        
+                        {showChainMenu && (
+                            <div className="absolute z-50 w-full mt-2 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                {availableChains.map((chain) => {
+                                    const chainLogo = getChainLogo(chain.value);
+                                    const isSelected = selectedChain === chain.value;
+                                    return (
+                                        <button
+                                            key={chain.value}
+                                            type="button"
+                                            onClick={() => {
+                                                handleChainChange(chain.value);
+                                                setShowChainMenu(false);
+                                            }}
+                                            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${
+                                                isSelected ? "bg-gray-200 font-bold" : ""
+                                            }`}
+                                        >
+                                            {chainLogo && (
+                                                <img 
+                                                    src={chainLogo} 
+                                                    alt={chain.name}
+                                                    className="w-6 h-6 rounded-full"
+                                                />
+                                            )}
+                                            <span className="flex-1">{chain.name}</span>
+                                            {isSelected && <span className="text-xs">✓</span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <div className="space-y-2">
                     <label className="font-bold">代幣 (Token)</label>
-                    <select
-                        className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium"
-                        onChange={(e) => setTokenAddress(e.target.value)}
-                        value={tokenAddress}
-                    >
-                        <option value={ZeroAddress}>
-                            Native Token ({selectedChain === "sepolia" ? "ETH" : "ZETA"})
-                        </option>
-                        <option value={CONFIG.CONTRACTS.TEST_ERC20}>Test ERC20</option>
-                    </select>
+                    <div className="relative" ref={tokenMenuRef}>
+                        <button
+                            type="button"
+                            onClick={() => setShowTokenMenu(!showTokenMenu)}
+                            className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium flex items-center gap-2 hover:bg-gray-100 transition-colors"
+                        >
+                            {getTokenLogo() && (
+                                <img 
+                                    src={getTokenLogo()!} 
+                                    alt={tokenAddress === ZeroAddress 
+                                        ? `Native Token (${selectedChain === "sepolia" ? "ETH" : "ZETA"})`
+                                        : "Test ERC20"}
+                                    className="w-5 h-5 rounded-full"
+                                />
+                            )}
+                            <span className="flex-1 text-left">
+                                {tokenAddress === ZeroAddress
+                                    ? `Native Token (${selectedChain === "sepolia" ? "ETH" : "ZETA"})`
+                                    : "Test ERC20"}
+                            </span>
+                            <span className="text-gray-400">▼</span>
+                        </button>
+                        
+                        {showTokenMenu && (
+                            <div className="absolute z-50 w-full mt-2 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                {/* Native Token 選項 */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setTokenAddress(ZeroAddress);
+                                        setShowTokenMenu(false);
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${
+                                        tokenAddress === ZeroAddress ? "bg-gray-200 font-bold" : ""
+                                    }`}
+                                >
+                                    {getChainLogo(selectedChain) && (
+                                        <img 
+                                            src={getChainLogo(selectedChain)!} 
+                                            alt={`Native Token (${selectedChain === "sepolia" ? "ETH" : "ZETA"})`}
+                                            className="w-6 h-6 rounded-full"
+                                        />
+                                    )}
+                                    <span className="flex-1">
+                                        Native Token ({selectedChain === "sepolia" ? "ETH" : "ZETA"})
+                                    </span>
+                                    {tokenAddress === ZeroAddress && <span className="text-xs">✓</span>}
+                                </button>
+                                
+                                {/* Test ERC20 選項 */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setTokenAddress(CONFIG.CONTRACTS.TEST_ERC20);
+                                        setShowTokenMenu(false);
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${
+                                        tokenAddress === CONFIG.CONTRACTS.TEST_ERC20 ? "bg-gray-200 font-bold" : ""
+                                    }`}
+                                >
+                                    {getTokenLogoUrl(CONFIG.CONTRACTS.TEST_ERC20) && (
+                                        <img 
+                                            src={getTokenLogoUrl(CONFIG.CONTRACTS.TEST_ERC20)!} 
+                                            alt="Test ERC20"
+                                            className="w-6 h-6 rounded-full"
+                                        />
+                                    )}
+                                    <span className="flex-1">Test ERC20</span>
+                                    {tokenAddress === CONFIG.CONTRACTS.TEST_ERC20 && <span className="text-xs">✓</span>}
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <p className="text-xs text-gray-500 font-mono break-all">
                         Addr: {tokenAddress}
                     </p>

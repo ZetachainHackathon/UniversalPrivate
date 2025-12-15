@@ -9,6 +9,7 @@ export interface TokenInfo {
     symbol: string;
     decimals: number;
     balance?: bigint;
+    logoUrl?: string;
 }
 
 /**
@@ -81,7 +82,27 @@ export const getAllConfiguredTokens = (): TokenInfo[] => {
         address: token.address,
         symbol,
         decimals: token.decimals || 18,
+        logoUrl: "logoUrl" in token ? token.logoUrl : undefined,
     }));
+};
+
+/**
+ * 根據地址獲取 Token Logo URL
+ */
+export const getTokenLogoUrl = (tokenAddress: string): string | undefined => {
+    // Native token
+    if (tokenAddress.toLowerCase() === ZeroAddress.toLowerCase()) {
+        return CONFIG.TOKENS.WZETA.logoUrl;
+    }
+
+    // 從配置中查找
+    for (const [_, token] of Object.entries(CONFIG.TOKENS)) {
+        if (token.address.toLowerCase() === tokenAddress.toLowerCase()) {
+            return "logoUrl" in token ? token.logoUrl : undefined;
+        }
+    }
+
+    return undefined;
 };
 
 

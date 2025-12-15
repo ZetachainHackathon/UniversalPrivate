@@ -36,10 +36,25 @@ import { getTokenDecimals } from "./token-utils";
 // Contract Addresses
 const ZETACHAIN_ADAPT = CONFIG.CHAINS.ZETACHAIN.ZETACHAIN_ADAPT;
 
+// Helper function to convert target chain to chain key
+const targetChainToChainKey = (targetChain: string): keyof typeof CONFIG.CHAINS => {
+    const chainKey = targetChain.toUpperCase().replace(/-/g, "_") as keyof typeof CONFIG.CHAINS;
+    if (!(chainKey in CONFIG.CHAINS)) {
+        throw new Error(`Unknown target chain: ${targetChain}`);
+    }
+    return chainKey;
+};
+
 // Helper function to get ZRC20_GAS address based on target chain
-const getTargetZRC20 = (targetChain: "sepolia" | "base-sepolia"): string => {
-    const chainKey = targetChain === "base-sepolia" ? "BASE_SEPOLIA" : "SEPOLIA";
-    return CONFIG.CHAINS[chainKey].ZRC20_GAS;
+const getTargetZRC20 = (targetChain: string): string => {
+    const chainKey = targetChainToChainKey(targetChain);
+    const chainConfig = CONFIG.CHAINS[chainKey];
+    
+    if (!("ZRC20_GAS" in chainConfig) || !chainConfig.ZRC20_GAS) {
+        throw new Error(`Chain ${chainKey} does not have ZRC20_GAS configured`);
+    }
+    
+    return chainConfig.ZRC20_GAS;
 };
 
 // ABIs
@@ -96,7 +111,7 @@ export const generateUnshieldOutsideChainData = async (
     amount: bigint,
     recipientAddress: string,
     signer: JsonRpcSigner | Wallet,
-    targetChain: "sepolia" | "base-sepolia",
+    targetChain: string,
     tokenAddress: string
 ) => {
     const encryptionKey = await getEncryptionKeyFromPassword(password);
@@ -240,7 +255,7 @@ export const executeCrossChainTransferOnZetaChain = async (
     amount: string,
     recipientAddress: string,
     signer: JsonRpcSigner | Wallet,
-    targetChain: "sepolia" | "base-sepolia",
+    targetChain: string,
     tokenAddress: string
 ) => {
     // 獲取 Token decimals
@@ -301,7 +316,7 @@ export const executeCrossChainTransferFromEvm = async (
     password: string,
     signer: JsonRpcSigner | Wallet,
     sourceChain: string,
-    targetChain: "sepolia" | "base-sepolia"
+    targetChain: string
 ) => {
     // 1) 產生在 Zetachain 上執行的跨鏈轉帳交易資料
     const { to, data } = await generateUnshieldOutsideChainData(
@@ -359,7 +374,7 @@ export const executeCrossChainTransfer = async (
     recipientAddress: string,
     signer: JsonRpcSigner | Wallet,
     sourceChain: string,
-    targetChain: "sepolia" | "base-sepolia",
+    targetChain: string,
     tokenAddress: string
 ) => {
     // 檢查來源鏈類型（支持大寫和小寫的鏈名稱）

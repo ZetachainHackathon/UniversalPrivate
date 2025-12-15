@@ -42,7 +42,7 @@ export default function CrossChainPage() {
   const [amount, setAmount] = useState("0.01");
   const [recipient, setRecipient] = useState(""); // For Transfer
   const [transferType, setTransferType] = useState<"internal" | "cross-chain">("internal");
-  const [targetChain, setTargetChain] = useState<"sepolia" | "base-sepolia">("sepolia");
+  const [targetChain, setTargetChain] = useState<string>("sepolia");
 
 
   // Hooks (Phase 2 Smart Hooks + Phase 3 Toast)
