@@ -17,32 +17,13 @@ patchedDependencies:
 importers:
 
   .:
-    dependencies:
-      '@railgun-community/shared-models':
-        specifier: 7.6.1
-        version: 7.6.1(patch_hash=ehddunkntkmgicfwnpfb25fwvi)(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))
-      '@railgun-community/wallet':
-        specifier: 10.4.0
-        version: 10.4.0(@graphql-tools/utils@10.11.0(graphql@16.12.0))(@types/node@22.19.2)(bufferutil@4.0.9)(chai@6.2.1)(react-native@0.82.1(@babel/core@7.28.5)(@types/react@19.2.2)(bufferutil@4.0.9)(react@19.2.1)(utf-8-validate@5.0.10))(tslib@2.8.1)(utf-8-validate@5.0.10)
-      '@types/snarkjs':
-        specifier: ^0.7.9
-        version: 0.7.9
-      ethers:
-        specifier: 6.13.1
-        version: 6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      level-js:
-        specifier: ^6.1.0
-        version: 6.1.0
-      snarkjs:
-        specifier: ^0.7.5
-        version: 0.7.5
     devDependencies:
       husky:
         specifier: ^9.1.7
         version: 9.1.7
       next:
         specifier: ^16.0.7
-        version: 16.0.8(@babel/core@7.28.5)(@playwright/test@1.57.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        version: 16.0.8(@playwright/test@1.57.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       patch-package:
         specifier: ^8.0.1
         version: 8.0.1
@@ -61,6 +42,12 @@ importers:
       '@railgun-community/engine':
         specifier: ^9.5.1
         version: 9.5.1(bufferutil@4.0.9)(chai@6.2.1)(utf-8-validate@5.0.10)
+      '@railgun-community/shared-models':
+        specifier: 7.6.1
+        version: 7.6.1(patch_hash=ehddunkntkmgicfwnpfb25fwvi)(ethers@6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10))
+      '@railgun-community/wallet':
+        specifier: 10.4.0
+        version: 10.4.0(@graphql-tools/utils@10.11.0(graphql@16.12.0))(@types/node@22.19.2)(bufferutil@4.0.9)(chai@6.2.1)(react-native@0.82.1(@babel/core@7.28.5)(@types/react@19.2.2)(bufferutil@4.0.9)(react@19.2.1)(utf-8-validate@5.0.10))(tslib@2.8.1)(utf-8-validate@5.0.10)
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -70,6 +57,12 @@ importers:
       brotli-wasm:
         specifier: ^3.0.1
         version: 3.0.1
+      ethers:
+        specifier: 6.13.1
+        version: 6.13.1(bufferutil@4.0.9)(utf-8-validate@5.0.10)
+      level-js:
+        specifier: 6.1.0
+        version: 6.1.0
       lucide-react:
         specifier: ^0.469.0
         version: 0.469.0(react@19.2.1)
@@ -85,6 +78,9 @@ importers:
       react-dom:
         specifier: ^19.2.0
         version: 19.2.1(react@19.2.1)
+      snarkjs:
+        specifier: 0.7.5
+        version: 0.7.5
     devDependencies:
       '@playwright/test':
         specifier: ^1.57.0
@@ -107,6 +103,9 @@ importers:
       '@types/react-dom':
         specifier: 19.2.2
         version: 19.2.2(@types/react@19.2.2)
+      '@types/snarkjs':
+        specifier: 0.7.9
+        version: 0.7.9
       '@vitejs/plugin-react':
         specifier: ^5.1.2
         version: 5.1.2(vite@7.2.7(@types/node@22.19.2)(jiti@1.21.7)(terser@5.44.1)(yaml@2.8.2))
@@ -10460,6 +10459,30 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
+  next@16.0.8(@playwright/test@1.57.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+    dependencies:
+      '@next/env': 16.0.8
+      '@swc/helpers': 0.5.15
+      caniuse-lite: 1.0.30001760
+      postcss: 8.4.31
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
+      styled-jsx: 5.1.6(react@19.2.1)
+    optionalDependencies:
+      '@next/swc-darwin-arm64': 16.0.8
+      '@next/swc-darwin-x64': 16.0.8
+      '@next/swc-linux-arm64-gnu': 16.0.8
+      '@next/swc-linux-arm64-musl': 16.0.8
+      '@next/swc-linux-x64-gnu': 16.0.8
+      '@next/swc-linux-x64-musl': 16.0.8
+      '@next/swc-win32-arm64-msvc': 16.0.8
+      '@next/swc-win32-x64-msvc': 16.0.8
+      '@playwright/test': 1.57.0
+      sharp: 0.34.5
+    transitivePeerDependencies:
+      - '@babel/core'
+      - babel-plugin-macros
+
   node-addon-api@2.0.2: {}
 
   node-addon-api@3.2.1: {}
@@ -11482,6 +11505,11 @@ snapshots:
       react: 19.2.1
     optionalDependencies:
       '@babel/core': 7.28.5
+
+  styled-jsx@5.1.6(react@19.2.1):
+    dependencies:
+      client-only: 0.0.1
+      react: 19.2.1
 
   sucrase@3.35.1:
     dependencies:

@@ -23,14 +23,6 @@
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {
-    "@railgun-community/shared-models": "7.6.1",
-    "@railgun-community/wallet": "10.4.0",
-    "@types/snarkjs": "^0.7.9",
-    "ethers": "6.13.1",
-    "level-js": "^6.1.0",
-    "snarkjs": "^0.7.5"
-  },
   "pnpm": {
     "overrides": {
       "@railgun-community/shared-models": "7.6.1",
