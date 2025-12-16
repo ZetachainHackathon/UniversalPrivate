@@ -3,7 +3,7 @@ import { NetworkName } from "@railgun-community/shared-models";
 export const CONFIG = {
     RAILGUN_NETWORK: {
         NAME: NetworkName.ZetachainTestnet,
-        RPC_URL:  "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+        RPC_URL: "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
         CHAIN_ID: 7001,
     },
     CONTRACTS: {
@@ -15,26 +15,26 @@ export const CONFIG = {
         // Note: The same ERC-20 token from different chains are represented as different ZRC-20 tokens
         // Source: https://www.zetachain.com/docs/developers/evm/zrc20
         // API: https://zetachain.blockpi.network/lcd/v1/public/zeta-chain/fungible/foreign_coins
-        
+
         // Native ZetaChain Token
         WZETA: {
             address: "0x5F0b1a82749cb4E2278EC87F8BF6B618dC71a8bf", // WZETA on ZetaChain
             decimals: 18,
             logoUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zetachain/info/logo.png",
         },
-        
+
         // ETH from different chains (ZRC-20 representation)
         ETH_BASE_SEPOLIA: {
             address: "0x236b0DE675cC8F46AE186897fCCeFe3370C9eDeD", // ETH.BASESEP
             decimals: 18,
-            logoUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x0000000000000000000000000000000000000000/logo.png",
+            logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVLmv2MFyCUQxRPE1kdlqUjZnwPWZp3I0CQw&s",
         },
         ETH_SEPOLIA: {
             address: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0", // ETH.ETHSEP
             decimals: 18,
-            logoUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x0000000000000000000000000000000000000000/logo.png",
+            logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVLmv2MFyCUQxRPE1kdlqUjZnwPWZp3I0CQw&s",
         },
-        
+
         // Stablecoins from Sepolia (ZRC-20 representation)
         USDC_SEPOLIA: {
             address: "0xcC683A782f4B30c138787CB5576a86AF66fdc31d", // USDC.ETHSEP
@@ -51,7 +51,7 @@ export const CONFIG = {
             decimals: 6,
             logoUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png",
         },
-        
+
         // Stablecoins from Base Sepolia (ZRC-20 representation)
         USDC_BASE_SEPOLIA: {
             address: "0xd0eFed75622e7AA4555EE44F296dA3744E3ceE19", // USDC.BASESEP
@@ -68,18 +68,18 @@ export const CONFIG = {
             decimals: 6,
             logoUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/assets/0xfde4C96c8593536E31F229EA8f37b2ADa2699f50/logo.png",
         },
-        
+
         // Gas tokens from different chains (ZRC-20 representation)
         // Note: These are native gas tokens from various chains represented as ZRC-20 on ZetaChain
         ETH_ARBITRUM_SEPOLIA: {
             address: "0x1de70f3e971B62A0707dA18100392af14f7fB677", // ETH.ARBSEP
             decimals: 18,
-            logoUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x0000000000000000000000000000000000000000/logo.png",
+            logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVLmv2MFyCUQxRPE1kdlqUjZnwPWZp3I0CQw&s",
         },
         BNB_BSC: {
             address: "0xd97B1de3619ed2c6BEb3860147E30cA8A7dC9891", // BNB.BSC
             decimals: 18,
-            logoUrl: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png",
+            logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVLmv2MFyCUQxRPE1kdlqUjZnwPWZp3I0CQw&s",
         },
         SUI_SUI: {
             address: "0x3e128c169564DD527C8e9bd85124BF6A890E5a5f", // SUI.SUI
@@ -128,7 +128,7 @@ export const CONFIG = {
             ID_HEX: "0xaa36a7",
             EVM_ADAPT: "0x7bE4f15d073611A13A9C3C123500Ae445F546246",
             ZRC20_GAS: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0", // ETH.ETHSEP
-            CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x0000000000000000000000000000000000000000/logo.png",
+            CHAIN_LOGO: "https://sepolia.dev/wp-content/uploads/elementor/thumbs/the-dolphin-po0q7ezlhqqzvrfmzw0atih2l0vqelut73w4eh5qtc.png",
         },
         ZETACHAIN: {
             ID_DEC: 7001,
@@ -174,7 +174,7 @@ export const CONFIG = {
         POLYGON_AMOY: {
             ID_DEC: 80002,
             ID_HEX: "0x13882",
-            EVM_ADAPT: "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e", 
+            EVM_ADAPT: "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
             ZRC20_GAS: "0x777915D031d1e8144c90D025C594b3b8Bf07a08d", // POL.AMOY
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png",
         }
