@@ -14,6 +14,7 @@ import { useTransferTransaction } from "@/hooks/use-transfer-tx";
 import { CrossChainHeader } from "@/components/cross-chain/header";
 import { ShieldForm } from "@/components/cross-chain/shield-form";
 import { TransferForm } from "@/components/cross-chain/transfer-form";
+import { LiquidityForm } from "@/components/cross-chain/liquidity-form";
 import { Button } from "@repo/ui/components/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 import { CONFIG } from "@/config/env";
@@ -53,11 +54,14 @@ export default function CrossChainPage() {
     txHash: txHashTransfer
   } = useTransferTransaction();
 
+  // For Liquidity (需要創建對應的 hook)
+  // const { executeAddLiquidity, isLoading: isLoadingLiquidity, txHash: txHashLiquidity } = useLiquidityTransaction();
+
   // 合併 txHash 以顯示 (簡單處理：顯示最新的那個)
-  const txHash = txHashShield || txHashTransfer;
+  const txHash = txHashShield || txHashTransfer; // || txHashLiquidity;
   // Combine status for display
   const [scanStatus, setScanStatus] = useState("");
-  const isLoading = isLoadingShield || isLoadingTransfer;
+  const isLoading = isLoadingShield || isLoadingTransfer; // || isLoadingLiquidity;
   const status = scanStatus; // Only scanStatus remains as a direct status string
 
   // 1. 同步網路
@@ -122,6 +126,13 @@ export default function CrossChainPage() {
     });
   };
 
+  // 執行 Add Liquidity (增加流動性)
+  const handleAddLiquidity = async () => {
+    // TODO: 實作流動性添加邏輯
+    // await executeAddLiquidity({ ... });
+    console.log("Add Liquidity - 待實作");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       <CrossChainHeader />
@@ -131,7 +142,7 @@ export default function CrossChainPage() {
         <div className="w-full max-w-4xl border-2 border-black rounded-2xl p-8 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
 
           <Tabs defaultValue="shield" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8 border-2 border-black p-1 rounded-xl bg-gray-100 h-auto">
+            <TabsList className="grid w-full grid-cols-3 mb-8 border-2 border-black p-1 rounded-xl bg-gray-100 h-auto">
               <TabsTrigger
                 value="shield"
                 className="text-lg font-bold py-3 data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] data-[state=active]:border-2 data-[state=active]:border-black rounded-lg transition-all"
@@ -143,6 +154,12 @@ export default function CrossChainPage() {
                 className="text-lg font-bold py-3 data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] data-[state=active]:border-2 data-[state=active]:border-black rounded-lg transition-all"
               >
                 Transfer (轉帳)
+              </TabsTrigger>
+              <TabsTrigger
+                value="defi"
+                className="text-lg font-bold py-3 data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] data-[state=active]:border-2 data-[state=active]:border-black rounded-lg transition-all"
+              >
+                DeFi (DeFi 操作)
               </TabsTrigger>
             </TabsList>
 
@@ -178,6 +195,17 @@ export default function CrossChainPage() {
                 isLoading={isLoading}
                 targetChain={targetChain}
                 setTargetChain={setTargetChain}
+              />
+            </TabsContent>
+
+            {/* DeFi Content */}
+            <TabsContent value="defi" className="space-y-6">
+              <LiquidityForm
+                selectedChain={selectedChain}
+                railgunAddress={railgunAddress}
+                balances={balances}
+                handleAddLiquidity={handleAddLiquidity}
+                isLoading={isLoading}
               />
             </TabsContent>
           </Tabs>
