@@ -87,9 +87,11 @@ Railgun Engine 是一個較重的 WASM後台進程。
 *   **`header.tsx`**: 頂部狀態列。負責顯示當前連線的網路（支援所有配置的鏈，包括 ZetaChain）、錢包連接按鈕、以及 Railgun 地址。提供網路切換下拉選單，可切換到任何已配置的測試網。
 *   **`shield-form.tsx`**: "入金" 表單。負責收集用戶輸入 (Token, Amount)，並呼叫 `useShieldTransaction` 將公開代幣轉換為私有代幣 (Shield)。
 *   **`transfer-form.tsx`**: "隱私轉帳/跨鏈" 表單。負責收集接收方與金額，處理 0zk -> 0zk 轉帳或 Unshield 跨鏈操作。
-*   **`liquidity-form.tsx`**: "DeFi 操作" 表單。實現兩階段操作流程：
-    1.  **第一階段**：DeFi 功能選擇頁面，顯示「流動性管理」選項（可點擊進入）和「Coming Soon」提示。
-    2.  **第二階段**：流動性管理介面，包含「添加流動性」和「移除流動性」選項。添加流動性功能提供完整的 UI（代幣對選擇、金額輸入、餘額顯示），目前後端邏輯為佔位符，待完整實作。
+*   **`liquidity-form.tsx`**: "DeFi 操作" 表單。實現多階段操作流程：
+    1.  **第一階段（category）**：DeFi 功能選擇頁面，顯示「流動性管理」選項（可點擊進入）和「Coming Soon」提示。
+    2.  **第二階段（pool-selection）**：池子選擇介面，自動從 Uniswap V2 Factory 查詢並顯示所有可用的流動性池。用戶選擇池子後，自動填充代幣對信息。
+    3.  **第三階段（liquidity）**：流動性管理操作選擇，顯示選中的池子信息，提供「添加流動性」和「移除流動性」卡片式按鈕。
+    4.  **第四階段（add-liquidity-form）**：添加流動性表單，提供完整的 UI（代幣對顯示、金額輸入、餘額顯示、提交按鈕）。支援多鏈操作：在 ZetaChain 上直接執行，在其他 EVM 鏈上透過 EVMAdapt 轉送到 ZetaChain。
 
 #### 2. `components/providers/` (全局 Context)
 應用程式的 "脊椎"，負責管理全域單例狀態。
@@ -107,11 +109,12 @@ Railgun Engine 是一個較重的 WASM後台進程。
 *   **`use-transfer-tx.ts`**: 封裝 Transfer 流程。
     *   生成 Zero-Knowledge Proof (運算密集型)。
     *   建構跨鏈 Unshield Transaction。
-*   **`use-liquidity-tx.ts`**: 封裝 DeFi 操作流程（待實作）。
-    *   處理流動性添加/移除的邏輯。
+*   **`use-liquidity-tx.ts`**: 封裝 DeFi 操作流程。
+    *   處理流動性添加的邏輯（移除流動性待實作）。
     *   透過 RelayAdapt 的 multicall 功能與 DEX 合約交互。
     *   確保代幣從 Railgun 隱私池中正確提取並提供到流動性池。
-    *   目前 UI 層已完成，待實作後端交易邏輯。
+    *   支援多鏈操作：自動判斷當前鏈類型，在 ZetaChain 上直接執行，在其他 EVM 鏈上透過 EVMAdapt 執行。
+    *   驗證代幣地址、金額，計算滑點保護，處理錯誤和 Toast 提示。
 *   **`use-network-sync.ts`**: 確保 URL 路由與當前錢包網路一致。
 *   **`use-railgun-auto-scan.ts`**: 背景勾子，定時觸發餘額掃描與 Merkle Tree 重建。
 
@@ -124,12 +127,17 @@ Railgun Engine 是一個較重的 WASM後台進程。
     1.  生成 Unshield Proof (私有 -> 公開)。
     2.  建構對 `ZetachainAdapt` 合約的呼叫 (轉移資產)。
     3.  建構對 `EVMAdapt` 的 `unshieldOutsideChain` 呼叫。
-*   **`liquidity.ts`**: DeFi 操作封裝層（待實作）。負責：
+*   **`liquidity.ts`**: DeFi 操作封裝層。負責：
     1.  生成 Unshield Proof 以從 Railgun 隱私池提取代幣。
     2.  建構對 DEX 合約的調用（如 Uniswap V2 Router 的 `addLiquidity`）。
     3.  透過 RelayAdapt 的 multicall 功能在單筆交易中完成 Unshield + DeFi 操作 + Shield（可選）。
-    4.  處理代幣對的比例計算和滑點保護。
-    5.  目前僅在 ZetaChain 上支援，UI 層已完成，待實作完整的交易邏輯。
+    4.  處理代幣對的比例計算和滑點保護（預設 5%）。
+    5.  支援多鏈操作：在 ZetaChain 上直接執行 `executeAddLiquidity`，在其他 EVM 鏈上透過 `executeAddLiquidityFromEvm` 執行。
+*   **`uniswap-pools.ts`**: Uniswap 池子查詢工具。負責：
+    1.  從 Uniswap V2 Factory 查詢流動性池地址和詳細信息。
+    2.  獲取池子中的代幣對、儲備量、總供應量等信息。
+    3.  生成常見代幣對列表（WZETA 與其他代幣）。
+    4.  批量查詢池子信息，用於顯示池子選擇列表。
 *   **`db.ts`**: 配置 LevelDB 用於儲存加密數據。
 
 ## 4. UI 架構 (UI Architecture)
@@ -235,14 +243,57 @@ pnpm start
 1.  **Relayer Integration**: 目前交易為 Self-Signed。整合 Relayer 將允許 Gas-less 隱私交易 (使用代幣支付手續費)。
 2.  **WASM Multi-threading**: 優化證明生成速度。
 3.  **Mobile Support**: 針對行動瀏覽器的響應式設計改進。
-4.  **DeFi 功能完整實作**:
-    *   完成 `use-liquidity-tx.ts` hook 和 `liquidity.ts` 庫的實作。
-    *   實作流動性添加的完整交易邏輯（目前 UI 已完成）。
-    *   實作流動性移除功能（目前顯示 Coming Soon）。
-    *   支援多種 DEX 協議（Uniswap V2/V3、ZetaSwap 等）。
-    *   實作隱私代幣交換（Swap）功能（目前顯示 Coming Soon）。
-    *   整合更多 DeFi 協議（借貸、質押等，目前顯示 Coming Soon）。
+4.  **DeFi 功能擴展**:
+    *   ✅ 完成 `use-liquidity-tx.ts` hook 和 `liquidity.ts` 庫的實作。
+    *   ✅ 實作流動性添加的完整交易邏輯（UI 和後端邏輯已完成）。
+    *   ✅ 實作池子選擇功能（從 Uniswap V2 Factory 查詢池子列表）。
+    *   ✅ 支援多鏈操作（ZetaChain 直接執行，其他 EVM 鏈透過 EVMAdapt）。
+    *   ⏳ 實作流動性移除功能（目前顯示 Coming Soon）。
+    *   ⏳ 支援多種 DEX 協議（Uniswap V2/V3、ZetaSwap 等）。
+    *   ⏳ 實作隱私代幣交換（Swap）功能（目前顯示 Coming Soon）。
+    *   ⏳ 整合更多 DeFi 協議（借貸、質押等，目前顯示 Coming Soon）。
 
 ---
 
 *最後更新: 2025 年 1 月*
+
+## 8. DeFi 操作流程詳解 (DeFi Operations Flow)
+
+### 8.1 流動性管理流程
+
+流動性管理功能採用多階段操作流程，提供清晰的用戶體驗：
+
+1. **DeFi 功能選擇（category）**
+   - 用戶選擇「流動性管理」進入池子選擇階段
+   - 其他功能顯示「Coming Soon」
+
+2. **池子選擇（pool-selection）**
+   - 自動從 Uniswap V2 Factory 查詢所有可用池子
+   - 顯示池子中的代幣對、Logo 和地址
+   - 用戶選擇池子後，自動填充代幣對信息
+
+3. **操作選擇（liquidity）**
+   - 顯示選中的池子信息（漸變背景，突出顯示）
+   - 提供「添加流動性」和「移除流動性」卡片式按鈕
+   - 點擊「添加流動性」直接進入表單
+
+4. **添加流動性表單（add-liquidity-form）**
+   - 顯示選中的池子信息
+   - 顯示代幣 A 和代幣 B 的餘額
+   - 輸入金額並提交交易
+   - 支援多鏈：在 ZetaChain 上直接執行，在其他 EVM 鏈上透過 EVMAdapt 轉送
+
+### 8.2 多鏈支援機制
+
+DeFi 操作支援多鏈執行：
+
+- **ZetaChain 本地執行**：直接調用 `executeAddLiquidity`，在 ZetaChain 上執行交易
+- **其他 EVM 鏈執行**：透過 `executeAddLiquidityFromEvm`，使用 EVMAdapt 將交易轉送到 ZetaChain 執行
+- **自動判斷**：系統自動檢測當前連接的鏈，選擇適當的執行方式
+
+### 8.3 技術實現
+
+- **池子查詢**：使用 `uniswap-pools.ts` 從 Factory 合約查詢池子信息
+- **交易構建**：使用 `liquidity.ts` 構建 RelayAdapt multicall 交易
+- **零知識證明**：在客戶端生成 Unshield Proof，保護隱私
+- **滑點保護**：預設 5% 滑點保護，可配置

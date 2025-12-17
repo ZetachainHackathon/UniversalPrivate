@@ -3,8 +3,11 @@ import { Button } from "@repo/ui/components/button";
 import { CONFIG } from "@/config/env";
 import { ZeroAddress, formatUnits } from "ethers";
 import { getTokenLogoUrl, getTokenSymbol, getAllConfiguredTokens } from "@/lib/railgun/token-utils";
+import { useWallet } from "@/components/providers/wallet-provider";
+import { getCommonTokenPairs, getPoolsInfo, type PoolInfo } from "@/lib/railgun/uniswap-pools";
 
 type LiquidityFunction = "add-liquidity" | "remove-liquidity";
+type Stage = "category" | "liquidity" | "pool-selection" | "add-liquidity-form";
 
 interface LiquidityFormProps {
     selectedChain: string;
@@ -25,9 +28,17 @@ export function LiquidityForm({
     const [showTokenBMenu, setShowTokenBMenu] = useState(false);
     const tokenAMenuRef = useRef<HTMLDivElement>(null);
     const tokenBMenuRef = useRef<HTMLDivElement>(null);
+    const { signer } = useWallet();
 
-    // 固定為 ZetaChain
-    const isZetaChain = selectedChain === "zetachain";
+    // 狀態：當前階段
+    const [currentStage, setCurrentStage] = useState<Stage>("category");
+    
+    // 狀態：選中的池子
+    const [selectedPool, setSelectedPool] = useState<PoolInfo | null>(null);
+    
+    // 狀態：池子列表
+    const [pools, setPools] = useState<PoolInfo[]>([]);
+    const [isLoadingPools, setIsLoadingPools] = useState(false);
 
     // 獲取有餘額的代幣列表（帶餘額信息）
     const tokensWithBalance = useMemo(() => {
@@ -76,9 +87,6 @@ export function LiquidityForm({
         ];
     }, [tokensWithBalance]);
 
-    // 狀態：當前階段（選擇 DeFi 類別 或 流動性管理操作）
-    const [currentStage, setCurrentStage] = useState<"category" | "liquidity">("category");
-    
     // 狀態：流動性管理功能選擇
     const [liquidityFunction, setLiquidityFunction] = useState<LiquidityFunction>("add-liquidity");
 
@@ -140,6 +148,28 @@ export function LiquidityForm({
         };
     };
 
+    // 加載池子列表
+    useEffect(() => {
+        const loadPools = async () => {
+            if (currentStage !== "pool-selection" || !signer?.provider) {
+                return;
+            }
+
+            setIsLoadingPools(true);
+            try {
+                const commonPairs = getCommonTokenPairs();
+                const poolsInfo = await getPoolsInfo(commonPairs, signer.provider);
+                setPools(poolsInfo);
+            } catch (error) {
+                console.error("Failed to load pools:", error);
+            } finally {
+                setIsLoadingPools(false);
+            }
+        };
+
+        loadPools();
+    }, [currentStage, signer]);
+
     // 點擊外部關閉選單
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -165,20 +195,6 @@ export function LiquidityForm({
     const tokenABalance = getTokenBalance(tokenA);
     const tokenBBalance = getTokenBalance(tokenB);
 
-    // 如果不在 ZetaChain，顯示提示
-    if (!isZetaChain) {
-        return (
-            <div className="space-y-6">
-                <div className="text-center p-8 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
-                    <h2 className="text-xl font-bold mb-2">⚠️ 僅支援 ZetaChain</h2>
-                    <p className="text-gray-600">
-                        請切換到 ZetaChain Testnet 以使用 DeFi 功能
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="space-y-6">
             {/* 第一階段：DeFi 類別選擇 */}
@@ -187,7 +203,7 @@ export function LiquidityForm({
                     <div className="text-center">
                         <h2 className="text-2xl font-bold mb-2">DeFi 操作 (DeFi Operations)</h2>
                         <p className="text-gray-600 text-sm">
-                            選擇要使用的 DeFi 功能 (僅限 ZetaChain)
+                            選擇要使用的 DeFi 功能
                         </p>
                     </div>
 
@@ -201,7 +217,8 @@ export function LiquidityForm({
                                     type="button"
                                     onClick={() => {
                                         if (category.available && category.value === "liquidity") {
-                                            setCurrentStage("liquidity");
+                                            // 直接進入池子選擇階段
+                                            setCurrentStage("pool-selection");
                                         }
                                     }}
                                     className="w-full text-left p-4 border-2 border-black rounded-lg transition-all bg-white hover:bg-gray-50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
@@ -228,8 +245,92 @@ export function LiquidityForm({
                 </>
             )}
 
-            {/* 第二階段：流動性管理 */}
-            {currentStage === "liquidity" && (
+            {/* 第三階段：流動性管理操作選擇（選完池子後） */}
+            {currentStage === "liquidity" && selectedPool && (
+                <div className="space-y-6">
+                    {/* 返回按鈕 */}
+                    <button
+                        type="button"
+                        onClick={() => setCurrentStage("pool-selection")}
+                        className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-colors mb-2"
+                    >
+                        <span>←</span>
+                        <span>返回選擇池子</span>
+                    </button>
+
+                    {/* 顯示選中的池子信息 - 更突出的樣式 */}
+                    <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg mb-6">
+                        <div className="text-xs font-bold mb-3 text-gray-600 uppercase tracking-wide">選中的池子 (Selected Pool)</div>
+                        <div className="flex items-center gap-3">
+                            {selectedPool.token0LogoUrl && (
+                                <img src={selectedPool.token0LogoUrl} alt={selectedPool.token0Symbol} className="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+                            )}
+                            <span className="font-bold text-lg">{selectedPool.token0Symbol}</span>
+                            <span className="text-gray-400 text-xl">/</span>
+                            {selectedPool.token1LogoUrl && (
+                                <img src={selectedPool.token1LogoUrl} alt={selectedPool.token1Symbol} className="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+                            )}
+                            <span className="font-bold text-lg">{selectedPool.token1Symbol}</span>
+                        </div>
+                    </div>
+
+                    {/* 標題 */}
+                    <div className="text-center mb-4">
+                        <h2 className="text-2xl font-bold mb-2">選擇操作 (Select Operation)</h2>
+                        <p className="text-gray-600 text-sm">
+                            選擇要對該池子執行的操作
+                        </p>
+                    </div>
+
+                    {/* 操作選擇 - 改為卡片式按鈕 */}
+                    <div className="space-y-3">
+                        <label className="text-sm font-bold">流動性操作 (Liquidity Operations)</label>
+                        <div className="space-y-2">
+                            {liquidityOptions.map((option) => (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => {
+                                        if (option.available) {
+                                            setLiquidityFunction(option.value);
+                                            if (option.value === "add-liquidity") {
+                                                // 選擇添加流動性後，直接進入添加流動性表單
+                                                setCurrentStage("add-liquidity-form");
+                                            }
+                                        }
+                                    }}
+                                    disabled={!option.available}
+                                    className={`w-full text-left p-5 border-2 rounded-lg transition-all ${
+                                        option.available
+                                            ? "border-black bg-white hover:bg-gray-50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+                                            : "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <div className="font-bold text-lg mb-1">{option.label}</div>
+                                            <div className="text-xs text-gray-500">{option.protocol}</div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {!option.available && (
+                                                <span className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded font-bold">
+                                                    Coming Soon
+                                                </span>
+                                            )}
+                                            {option.available && (
+                                                <span className="text-gray-400 text-xl">→</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 第二階段：池子選擇 */}
+            {currentStage === "pool-selection" && (
                 <div className="space-y-6">
                     {/* 返回按鈕 */}
                     <button
@@ -241,39 +342,113 @@ export function LiquidityForm({
                         <span>返回</span>
                     </button>
 
-                    {/* 操作選擇 - 簡化為 Radio 按鈕 */}
-                    <div className="flex gap-4 mb-6">
-                        {liquidityOptions.map((option) => (
-                            <label
-                                key={option.value}
-                                className={`flex items-center gap-2 font-bold cursor-pointer ${
-                                    !option.available ? "opacity-50 cursor-not-allowed" : ""
-                                }`}
-                            >
-                                <input
-                                    type="radio"
-                                    name="liquidity-function"
-                                    value={option.value}
-                                    checked={liquidityFunction === option.value}
-                                    onChange={(e) => setLiquidityFunction(e.target.value as LiquidityFunction)}
-                                    disabled={!option.available}
-                                    className="w-5 h-5 accent-black"
-                                />
-                                <span>{option.label}</span>
-                                {!option.available && (
-                                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded font-bold ml-1">
-                                        Coming Soon
-                                    </span>
-                                )}
-                            </label>
-                        ))}
+                    <div className="text-center">
+                        <h2 className="text-2xl font-bold mb-2">選擇流動性池 (Select Pool)</h2>
+                        <p className="text-gray-600 text-sm">
+                            選擇要添加流動性的池子
+                        </p>
                     </div>
+
+                    {isLoadingPools ? (
+                        <div className="text-center p-8">
+                            <div className="text-gray-500">正在加載池子列表...</div>
+                        </div>
+                    ) : pools.length === 0 ? (
+                        <div className="text-center p-8 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                            <h3 className="text-lg font-bold mb-2">⚠️ 未找到可用池子</h3>
+                            <p className="text-gray-600 text-sm">
+                                目前沒有可用的流動性池，請先創建池子
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            <label className="text-sm font-bold">可用池子 (Available Pools)</label>
+                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                                {pools.map((pool) => (
+                                    <button
+                                        key={pool.pairAddress}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedPool(pool);
+                                            // 根據池子中的 token0 和 token1 設置 tokenA 和 tokenB
+                                            // 注意：需要確保順序正確
+                                            setTokenA(pool.token0);
+                                            setTokenB(pool.token1);
+                                            // 選完池子後，進入流動性管理操作選擇階段
+                                            setCurrentStage("liquidity");
+                                        }}
+                                        className="w-full text-left p-4 border-2 border-black rounded-lg transition-all bg-white hover:bg-gray-50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3 flex-1">
+                                                {/* Token 0 */}
+                                                <div className="flex items-center gap-2">
+                                                    {pool.token0LogoUrl && (
+                                                        <img
+                                                            src={pool.token0LogoUrl}
+                                                            alt={pool.token0Symbol}
+                                                            className="w-8 h-8 rounded-full"
+                                                        />
+                                                    )}
+                                                    <span className="font-bold">{pool.token0Symbol}</span>
+                                                </div>
+                                                <span className="text-gray-400">/</span>
+                                                {/* Token 1 */}
+                                                <div className="flex items-center gap-2">
+                                                    {pool.token1LogoUrl && (
+                                                        <img
+                                                            src={pool.token1LogoUrl}
+                                                            alt={pool.token1Symbol}
+                                                            className="w-8 h-8 rounded-full"
+                                                        />
+                                                    )}
+                                                    <span className="font-bold">{pool.token1Symbol}</span>
+                                                </div>
+                                            </div>
+                                            <span className="text-gray-400 ml-2">→</span>
+                                        </div>
+                                        <div className="mt-2 text-xs text-gray-500">
+                                            池子地址: {pool.pairAddress.slice(0, 6)}...{pool.pairAddress.slice(-4)}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* 根據選擇的功能顯示對應的表單 */}
-            {currentStage === "liquidity" && liquidityFunction === "add-liquidity" && (
+                {currentStage === "add-liquidity-form" && liquidityFunction === "add-liquidity" && (
                 <div className="space-y-6">
+                    {/* 返回按鈕 */}
+                    <button
+                        type="button"
+                        onClick={() => setCurrentStage("liquidity")}
+                        className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-colors mb-2"
+                    >
+                        <span>←</span>
+                        <span>返回</span>
+                    </button>
+
+                    {/* 顯示選中的池子信息 - 與操作選擇階段保持一致 */}
+                    {selectedPool && (
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-lg mb-6">
+                            <div className="text-xs font-bold mb-3 text-gray-600 uppercase tracking-wide">選中的池子 (Selected Pool)</div>
+                            <div className="flex items-center gap-3">
+                                {selectedPool.token0LogoUrl && (
+                                    <img src={selectedPool.token0LogoUrl} alt={selectedPool.token0Symbol} className="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+                                )}
+                                <span className="font-bold text-lg">{selectedPool.token0Symbol}</span>
+                                <span className="text-gray-400 text-xl">/</span>
+                                {selectedPool.token1LogoUrl && (
+                                    <img src={selectedPool.token1LogoUrl} alt={selectedPool.token1Symbol} className="w-8 h-8 rounded-full border-2 border-white shadow-md" />
+                                )}
+                                <span className="font-bold text-lg">{selectedPool.token1Symbol}</span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 代幣對選擇 - 使用 Grid 布局，突出顯示 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* 代幣 A */}
