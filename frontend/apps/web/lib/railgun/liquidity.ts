@@ -4,6 +4,7 @@ import {
     type Wallet,
     ContractTransaction,
     ZeroAddress,
+    JsonRpcProvider,
 } from "ethers";
 import {
     getEngine,
@@ -98,7 +99,9 @@ export const generateAddLiquidityTransaction = async (
     ];
 
     // 3. 構建 Approve 和 Uniswap addLiquidity 調用
-    const router = new Contract(routerAddress, UNISWAP_V2_ROUTER_ABI, signer.provider) as any;
+    // 重要：所有合約查詢都必須使用 ZetaChain 的 provider，因為 Router、Token 和 LP Token 都在 ZetaChain 上
+    const zetachainProvider = new JsonRpcProvider(CONFIG.RAILGUN_NETWORK.RPC_URL);
+    const router = new Contract(routerAddress, UNISWAP_V2_ROUTER_ABI, zetachainProvider) as any;
     
     // 計算 deadline（當前時間 + 20 分鐘）
     const deadline = Math.floor(Date.now() / 1000) + 20 * 60;
@@ -107,8 +110,8 @@ export const generateAddLiquidityTransaction = async (
     // 3.2. 構建 Approve 調用（RelayAdapt 需要先 Approve 代幣給 Uniswap Router）
     // 重要：Approve 時必須使用 finalTokenA 和 finalTokenB（排序後的），
     // 因為 addLiquidity 使用的是排序後的順序，Router 會從 RelayAdapt 轉移 finalTokenA 和 finalTokenB
-    const finalTokenAContract = new Contract(tokenA, ERC20_ABI, signer.provider) as any;
-    const finalTokenBContract = new Contract(tokenB, ERC20_ABI, signer.provider) as any;
+    const finalTokenAContract = new Contract(tokenA, ERC20_ABI, zetachainProvider) as any;
+    const finalTokenBContract = new Contract(tokenB, ERC20_ABI, zetachainProvider) as any;
     
     // 先將 Approve 設為 0（某些 ERC20 代幣要求，符合 ERC20 標準）
     // 然後再設置為實際金額
@@ -156,11 +159,8 @@ export const generateAddLiquidityTransaction = async (
         let erc20AmountShieldRecipients: RailgunERC20Recipient[] = [];
         if (shouldShieldLPToken && railgunAddress) {
             // 獲取 LP Token 地址（在 Uniswap V2 中，Pair 合約地址就是 LP Token 地址）
-            if (!signer?.provider) {
-                throw new Error("Provider 不可用，無法獲取 LP Token 地址");
-            }
-            
-            const lpTokenAddress = await getPairAddress(tokenA, tokenB, signer.provider);
+            // 重要：必須使用 ZetaChain 的 provider 查詢池子地址（重複使用上面創建的 provider）
+            const lpTokenAddress = await getPairAddress(tokenA, tokenB, zetachainProvider);
             
             // 檢查池子是否存在
             if (lpTokenAddress === ZeroAddress) {
@@ -258,7 +258,7 @@ export const generateAddLiquidityTransaction = async (
         overallBatchMinGasPrice,
         transactionGasDetails
     );
-
+    console.log("🚀 generateAddLiquidityTransaction transaction:", transaction);
     return {
         transaction: transaction.transaction,
         to: transaction.transaction.to,
@@ -332,6 +332,8 @@ export const executeAddLiquidityFromEvm = async (
         railgunAddress
     );
 
+    console.log("🚀 executeAddLiquidityFromEvm data:", data);
+
     // 2) 取得來源鏈對應的 EVMAdapt 地址
     type ChainKey = keyof typeof CONFIG.CHAINS;
     
@@ -357,7 +359,7 @@ export const executeAddLiquidityFromEvm = async (
         EVM_ADAPT_ABI,
         signer
     );
-    const tx = await evmAdaptContract.transactOnZetachain!(data);
+    const tx = await evmAdaptContract.transactOnZetachain!(data, { gasLimit: 1000000n });
     return tx;
 };
 
@@ -394,11 +396,9 @@ export const generateRemoveLiquidityTransaction = async (
     }
 
     // 2. 獲取 LP Token 地址
-    if (!signer?.provider) {
-        throw new Error("Provider 不可用，無法獲取 LP Token 地址");
-    }
-    
-    const lpTokenAddress = await getPairAddress(tokenA, tokenB, signer.provider);
+    // 重要：必須使用 ZetaChain 的 provider 查詢池子地址，因為所有池子都在 ZetaChain 上
+    const zetachainProvider = new JsonRpcProvider(CONFIG.RAILGUN_NETWORK.RPC_URL);
+    const lpTokenAddress = await getPairAddress(tokenA, tokenB, zetachainProvider);
     
     // 檢查池子是否存在
     if (lpTokenAddress === ZeroAddress) {
@@ -414,13 +414,14 @@ export const generateRemoveLiquidityTransaction = async (
     ];
 
     // 4. 構建 Approve 和 Uniswap removeLiquidity 調用
-    const router = new Contract(routerAddress, UNISWAP_V2_ROUTER_ABI, signer.provider) as any;
+    // 重要：所有合約查詢都必須使用 ZetaChain 的 provider
+    const router = new Contract(routerAddress, UNISWAP_V2_ROUTER_ABI, zetachainProvider) as any;
     
     // 計算 deadline（當前時間 + 20 分鐘）
     const deadline = Math.floor(Date.now() / 1000) + 20 * 60;
     
     // 4.1. 構建 Approve 調用（RelayAdapt 需要先 Approve LP Token 給 Uniswap Router）
-    const lpTokenContract = new Contract(lpTokenAddress, ERC20_ABI, signer.provider) as any;
+    const lpTokenContract = new Contract(lpTokenAddress, ERC20_ABI, zetachainProvider) as any;
     const approveLPTokenData = await lpTokenContract.approve.populateTransaction(routerAddress, liquidityAfterFee);
    
     
@@ -609,7 +610,7 @@ export const executeRemoveLiquidityFromEvm = async (
     password: string,
     signer: JsonRpcSigner | Wallet,
     sourceChain: string,
-    shouldShieldTokens: boolean = false,
+    shouldShieldTokens: boolean = true,
     railgunAddress?: string
 ) => {
     // 1) 產生在 Zetachain 上執行的移除流動性交易資料
