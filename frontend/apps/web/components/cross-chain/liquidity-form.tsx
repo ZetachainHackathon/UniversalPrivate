@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@repo/ui/components/button";
 import { CONFIG } from "@/config/env";
-import { ZeroAddress, formatUnits, parseUnits } from "ethers";
+import { ZeroAddress, formatUnits, parseUnits, JsonRpcProvider } from "ethers";
 import { getTokenLogoUrl, getTokenSymbol, getAllConfiguredTokens } from "@/lib/railgun/token-utils";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { getCommonTokenPairs, getPoolsInfo, type PoolInfo } from "@/lib/railgun/uniswap-pools";
@@ -151,7 +151,7 @@ export function LiquidityForm({
     useEffect(() => {
         const loadPools = async () => {
             // 只在進入池子選擇階段時才加載
-            if (currentStage !== "pool-selection" || !signer?.provider) {
+            if (currentStage !== "pool-selection") {
                 return;
             }
 
@@ -162,25 +162,26 @@ export function LiquidityForm({
 
             setIsLoadingPools(true);
             try {
-                // 獲取當前鏈 ID
-                const network = await signer.provider.getNetwork();
-                const chainId = Number(network.chainId);
+                // 重要：池子查詢始終在 ZetaChain 上進行，因為所有 ZRC-20 代幣都在 ZetaChain 上
+                // 無論當前連接到哪個鏈，都使用 ZetaChain 的 provider
+                const zetachainProvider = new JsonRpcProvider(CONFIG.RAILGUN_NETWORK.RPC_URL);
+                const zetachainChainId = CONFIG.RAILGUN_NETWORK.CHAIN_ID;
 
-                // 1. 先檢查快取
-                const cachedPools = getCachedPools(chainId);
+                // 1. 先檢查快取（使用 ZetaChain 的鏈 ID）
+                const cachedPools = getCachedPools(zetachainChainId);
                 if (cachedPools && cachedPools.length > 0) {
                     setPools(cachedPools);
                     setIsLoadingPools(false);
                     return;
                 }
 
-                // 2. 快取未命中，從鏈上查詢
+                // 2. 快取未命中，從 ZetaChain 查詢
                 const commonPairs = getCommonTokenPairs();
-                const poolsInfo = await getPoolsInfo(commonPairs, signer.provider);
+                const poolsInfo = await getPoolsInfo(commonPairs, zetachainProvider);
                 
-                // 3. 保存到快取
+                // 3. 保存到快取（使用 ZetaChain 的鏈 ID）
                 if (poolsInfo.length > 0) {
-                    setCachedPools(chainId, poolsInfo);
+                    setCachedPools(zetachainChainId, poolsInfo);
                 }
                 
                 setPools(poolsInfo);
@@ -193,7 +194,7 @@ export function LiquidityForm({
 
         loadPools();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentStage, signer]);
+    }, [currentStage]);
 
     // 移除代幣選擇相關的 useEffect（選擇池子後代幣已確定，不需要下拉選單）
 
