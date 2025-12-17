@@ -69,6 +69,7 @@ Railgun Engine 是一個較重的 WASM後台進程。
     *   **Shield**: `apps/web/lib/railgun/shield.ts` - 將公開 ERC20 轉換為隱私 Note。
     *   **Transfer**: `apps/web/lib/railgun/transfer.ts` - 隱私轉帳 (0zk -> 0zk)。
     *   **Cross-Chain**: `apps/web/lib/railgun/cross-chain-transfer.ts` - 複雜流程，涉及 Unshield + 跨合約調用。
+    *   **DeFi Operations**: `apps/web/lib/railgun/liquidity.ts` - 隱私 DeFi 操作，透過 RelayAdapt 的 multicall 功能與 DEX 協議交互（如增加流動性、交換等）。
 
 ### 3.3 狀態管理模式 (State Management)
 
@@ -83,9 +84,12 @@ Railgun Engine 是一個較重的 WASM後台進程。
 
 #### 1. `components/cross-chain/` (業務組件)
 這些是專門為 "跨鏈隱私交易" 頁面設計的業務組件，並非通用 UI。
-*   **`header.tsx`**: 頂部狀態列。負責顯示當前連線的網路 (Sepolia/ZetaChain)、錢包連接按鈕、以及 Railgun 餘額 (ZRC20)。
+*   **`header.tsx`**: 頂部狀態列。負責顯示當前連線的網路（支援所有配置的鏈，包括 ZetaChain）、錢包連接按鈕、以及 Railgun 地址。提供網路切換下拉選單，可切換到任何已配置的測試網。
 *   **`shield-form.tsx`**: "入金" 表單。負責收集用戶輸入 (Token, Amount)，並呼叫 `useShieldTransaction` 將公開代幣轉換為私有代幣 (Shield)。
 *   **`transfer-form.tsx`**: "隱私轉帳/跨鏈" 表單。負責收集接收方與金額，處理 0zk -> 0zk 轉帳或 Unshield 跨鏈操作。
+*   **`liquidity-form.tsx`**: "DeFi 操作" 表單。實現兩階段操作流程：
+    1.  **第一階段**：DeFi 功能選擇頁面，顯示「流動性管理」選項（可點擊進入）和「Coming Soon」提示。
+    2.  **第二階段**：流動性管理介面，包含「添加流動性」和「移除流動性」選項。添加流動性功能提供完整的 UI（代幣對選擇、金額輸入、餘額顯示），目前後端邏輯為佔位符，待完整實作。
 
 #### 2. `components/providers/` (全局 Context)
 應用程式的 "脊椎"，負責管理全域單例狀態。
@@ -103,6 +107,11 @@ Railgun Engine 是一個較重的 WASM後台進程。
 *   **`use-transfer-tx.ts`**: 封裝 Transfer 流程。
     *   生成 Zero-Knowledge Proof (運算密集型)。
     *   建構跨鏈 Unshield Transaction。
+*   **`use-liquidity-tx.ts`**: 封裝 DeFi 操作流程（待實作）。
+    *   處理流動性添加/移除的邏輯。
+    *   透過 RelayAdapt 的 multicall 功能與 DEX 合約交互。
+    *   確保代幣從 Railgun 隱私池中正確提取並提供到流動性池。
+    *   目前 UI 層已完成，待實作後端交易邏輯。
 *   **`use-network-sync.ts`**: 確保 URL 路由與當前錢包網路一致。
 *   **`use-railgun-auto-scan.ts`**: 背景勾子，定時觸發餘額掃描與 Merkle Tree 重建。
 
@@ -115,6 +124,12 @@ Railgun Engine 是一個較重的 WASM後台進程。
     1.  生成 Unshield Proof (私有 -> 公開)。
     2.  建構對 `ZetachainAdapt` 合約的呼叫 (轉移資產)。
     3.  建構對 `EVMAdapt` 的 `unshieldOutsideChain` 呼叫。
+*   **`liquidity.ts`**: DeFi 操作封裝層（待實作）。負責：
+    1.  生成 Unshield Proof 以從 Railgun 隱私池提取代幣。
+    2.  建構對 DEX 合約的調用（如 Uniswap V2 Router 的 `addLiquidity`）。
+    3.  透過 RelayAdapt 的 multicall 功能在單筆交易中完成 Unshield + DeFi 操作 + Shield（可選）。
+    4.  處理代幣對的比例計算和滑點保護。
+    5.  目前僅在 ZetaChain 上支援，UI 層已完成，待實作完整的交易邏輯。
 *   **`db.ts`**: 配置 LevelDB 用於儲存加密數據。
 
 ## 4. UI 架構 (UI Architecture)
@@ -220,7 +235,14 @@ pnpm start
 1.  **Relayer Integration**: 目前交易為 Self-Signed。整合 Relayer 將允許 Gas-less 隱私交易 (使用代幣支付手續費)。
 2.  **WASM Multi-threading**: 優化證明生成速度。
 3.  **Mobile Support**: 針對行動瀏覽器的響應式設計改進。
+4.  **DeFi 功能完整實作**:
+    *   完成 `use-liquidity-tx.ts` hook 和 `liquidity.ts` 庫的實作。
+    *   實作流動性添加的完整交易邏輯（目前 UI 已完成）。
+    *   實作流動性移除功能（目前顯示 Coming Soon）。
+    *   支援多種 DEX 協議（Uniswap V2/V3、ZetaSwap 等）。
+    *   實作隱私代幣交換（Swap）功能（目前顯示 Coming Soon）。
+    *   整合更多 DeFi 協議（借貸、質押等，目前顯示 Coming Soon）。
 
 ---
 
-*最後更新: 2025 年 12 月*
+*最後更新: 2025 年 1 月*

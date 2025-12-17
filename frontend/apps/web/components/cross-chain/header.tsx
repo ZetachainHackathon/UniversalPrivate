@@ -31,6 +31,7 @@ export function CrossChainHeader() {
                 if (lower === "testnet" || lower === "test") return "Testnet";
                 if (lower === "fuji") return "Fuji";
                 if (lower === "amoy") return "Amoy";
+                if (lower === "zetachain") return "ZetaChain";
                 return word.charAt(0) + word.slice(1).toLowerCase();
             })
             .join(" ");
@@ -155,7 +156,6 @@ export function CrossChainHeader() {
                         <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-lg z-50">
                             <div className="p-2">
                                 {Object.entries(CONFIG.CHAINS)
-                                    .filter(([key]) => key !== "ZETACHAIN") // 排除 ZetaChain（它不是 EVM 鏈）
                                     .map(([key, chainConfig]) => {
                                         const chainDisplayName = key
                                             .split("_")
@@ -165,6 +165,7 @@ export function CrossChainHeader() {
                                                 if (lower === "testnet" || lower === "test") return "Testnet";
                                                 if (lower === "fuji") return "Fuji";
                                                 if (lower === "amoy") return "Amoy";
+                                                if (lower === "zetachain") return "ZetaChain";
                                                 return word.charAt(0) + word.slice(1).toLowerCase();
                                             })
                                             .join(" ");
