@@ -17,7 +17,8 @@ import {
   type HDNodeWallet, 
   type Wallet, 
   type JsonRpcSigner,
-  formatUnits
+  formatUnits,
+  ZeroAddress
 } from "ethers";
 
 // 👇 引入我們之前寫好的模組
@@ -28,6 +29,7 @@ import {
 } from "./transaction-utils";
 import { TEST_NETWORK, TEST_TOKEN } from "@/constants";
 import { getProviderWallet } from "@/lib/utils";
+import { CONFIG } from "@/config/env";
 
 /**
  * 估算 Shield 交易所需的 Gas
@@ -68,40 +70,83 @@ export const erc20PopulateShieldTransaction = async (
   network: NetworkName,
   wallet: Wallet | HDNodeWallet | JsonRpcSigner,
   erc20AmountRecipients: RailgunERC20AmountRecipient[],
-  sendWithPublicWallet: boolean
+  sendWithPublicWallet: boolean,
+  onProgress?: (message: string) => void
 ) => {
   const spender = NETWORK_CONFIG[network].proxyContract;
   const walletAddress = await wallet.getAddress();
 
-  // 1. 檢查並執行 Approve
+  // 1. 檢查並執行 Approve（處理 Native Token 包裝）
   for (const amountRecipient of erc20AmountRecipients) {
+    const isNativeToken = amountRecipient.tokenAddress === ZeroAddress;
     
-    // 👇 3. 關鍵修正：建立 Contract 後，強制轉型為 IERC20
+    // 如果是 Native Token，需要先包裝成 WZETA
+    if (isNativeToken) {
+      onProgress?.("🔄 檢測到 Native Token (ZETA)，準備包裝為 WZETA...");
+      console.log("🔄 檢測到 Native Token，需要先包裝成 WZETA...");
+      
+      // 獲取 WZETA 地址
+      const wzetaAddress = CONFIG.TOKENS.WZETA?.address;
+      if (!wzetaAddress) {
+        throw new Error("WZETA 地址未配置，無法包裝 Native Token");
+      }
+      
+      // 檢查 Native Token 餘額
+      if (!wallet.provider) {
+        throw new Error("Provider 不可用，無法獲取 Native Token 餘額");
+      }
+      const nativeBalance = await wallet.provider.getBalance(walletAddress);
+      
+      if (nativeBalance < amountRecipient.amount) {
+        throw new Error(`Native Token 餘額不足：需要 ${formatUnits(amountRecipient.amount, 18)}，但只有 ${formatUnits(nativeBalance, 18)}`);
+      }
+      
+      // 包裝 Native Token 為 WZETA
+      const wzetaContract = new Contract(
+        wzetaAddress,
+        ["function deposit() payable returns ()"],
+        wallet
+      ) as any;
+      
+      onProgress?.(`📦 正在包裝 ${formatUnits(amountRecipient.amount, 18)} ZETA 為 WZETA...`);
+      console.log(`📦 正在包裝 ${formatUnits(amountRecipient.amount, 18)} Native Token 為 WZETA...`);
+      const wrapTx = await wzetaContract.deposit({ value: amountRecipient.amount });
+      
+      onProgress?.("⏳ 等待包裝交易確認...");
+      await wrapTx.wait();
+      
+      onProgress?.("✅ 包裝完成！準備進行 Shield...");
+      console.log("✅ 包裝成功！");
+      
+      // 更新 tokenAddress 為 WZETA
+      amountRecipient.tokenAddress = wzetaAddress;
+    }
+    
+    // 處理 ERC20 代幣（包括包裝後的 WZETA）
     const contract = new Contract(
       amountRecipient.tokenAddress,
       [
         "function allowance(address owner, address spender) view returns (uint256)",
         "function approve(address spender, uint256 amount) external returns (bool)",
-        "function balanceOf(address account) view returns (uint256)", // 👈 新增這個 ABI
-        "function deposit() payable", // 👈 WZETA 通常有 deposit 功能
+        "function balanceOf(address account) view returns (uint256)",
       ],
       wallet
     ) as unknown as IERC20 & { 
         balanceOf: (acc: string) => Promise<bigint>; 
-        deposit: () => Promise<ContractTransactionResponse> 
     };
 
     const balance = await contract.balanceOf(walletAddress);
     console.log(`💰 當前餘額: ${formatUnits(balance, 18)}`);
-    console.log(`📉 欲 Shield 數量: ${formatUnits(amountRecipient.amount, 18)}`)
+    console.log(`📉 欲 Shield 數量: ${formatUnits(amountRecipient.amount, 18)}`);
 
-    // 現在 contract.allowance 被視為必定存在的函數
     const allowance = await contract.allowance(walletAddress, spender);
     
     if (allowance < amountRecipient.amount) {
+      onProgress?.("⏳ 正在授權 (Approve) 代幣...");
       console.log(`⏳ 正在授權 (Approve) 代幣: ${amountRecipient.tokenAddress}...`);
       const tx = await contract.approve(spender, amountRecipient.amount);
       await tx.wait(); 
+      onProgress?.("✅ 授權完成！準備 Shield...");
       console.log("✅ 授權成功！");
     } else {
       console.log("ℹ️ 授權額度已足夠，跳過 Approve。");
@@ -126,6 +171,7 @@ export const erc20PopulateShieldTransaction = async (
   );
 
   // 3. 產生 Shield 交易物件
+  onProgress?.("🔐 生成零知識證明...");
   const { transaction, nullifiers } = await populateShield(
     TXIDVersion.V2_PoseidonMerkle,
     network,
@@ -151,7 +197,8 @@ export const executeLocalShield = async (
     tokenAddress: string,
     amount: bigint,
     signer: JsonRpcSigner | Wallet,
-    network: NetworkName = TEST_NETWORK
+    network: NetworkName = TEST_NETWORK,
+    onProgress?: (message: string) => void
 ) => {
     console.log("🚀 準備執行 Local Shield...");
     const walletAddress = await signer.getAddress();
@@ -171,10 +218,12 @@ export const executeLocalShield = async (
         network,
         signer,
         erc20AmountRecipients,
-        true // sendWithPublicWallet
+        true, // sendWithPublicWallet
+        onProgress
     );
 
     // 發送 Shield 交易
+    onProgress?.("📤 發送 Shield 交易中...");
     console.log("📤 發送 Shield 交易中...");
     const tx = await signer.sendTransaction(transaction);
     console.log("Transaction Hash:", tx.hash);

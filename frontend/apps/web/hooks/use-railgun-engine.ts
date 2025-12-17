@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { RailgunBalancesEvent } from "@railgun-community/shared-models";
 
 export function useRailgunEngine() {
     const [isReady, setIsReady] = useState(false);
     const [scanProgress, setScanProgress] = useState(0);
     const [balances, setBalances] = useState<RailgunBalancesEvent | null>(null);
+    // 保存所有 balanceBucket 的餘額，以便查詢
+    const allBalancesRef = useRef<Map<string, RailgunBalancesEvent>>(new Map());
 
     useEffect(() => {
         let cleanupListeners: (() => void) | undefined;
@@ -28,7 +30,30 @@ export function useRailgunEngine() {
                         if (isMounted) setScanProgress(progress);
                     },
                     (balanceEvent) => {
-                        if (isMounted) setBalances(balanceEvent);
+                        if (isMounted) {
+                            console.log("💰 餘額更新事件:", {
+                                balanceBucket: balanceEvent.balanceBucket,
+                                chain: balanceEvent.chain,
+                                erc20Amounts: balanceEvent.erc20Amounts.map((t: any) => ({
+                                    tokenAddress: t.tokenAddress,
+                                    amount: t.amount.toString(),
+                                })),
+                            });
+                            
+                            // 保存所有 balanceBucket 的餘額
+                            allBalancesRef.current.set(balanceEvent.balanceBucket, balanceEvent);
+                            
+                            // 優先顯示 "Spendable" 的餘額，如果沒有則顯示其他 bucket
+                            if (balanceEvent.balanceBucket === "Spendable") {
+                                setBalances(balanceEvent);
+                            } else {
+                                // 如果當前沒有 Spendable 餘額，顯示最新的餘額
+                                const spendableBalance = allBalancesRef.current.get("Spendable");
+                                if (!spendableBalance) {
+                                    setBalances(balanceEvent);
+                                }
+                            }
+                        }
                     }
                 );
 
