@@ -29,11 +29,15 @@ export const CONFIG = {
 | `NAME` | `NetworkName` | 網路名稱，使用 `@railgun-community/shared-models` 中的列舉 |
 | `RPC_URL` | `string` | ZetaChain Testnet 的 RPC 端點 |
 | `CHAIN_ID` | `number` | 鏈 ID 號碼 |
+| `UniswapV2Router` | `string` | Uniswap V2 Router 合約地址，用於 DeFi 操作（添加/移除流動性） |
+| `UniswapV2Factory` | `string` | Uniswap V2 Factory 合約地址，用於查詢流動性池 |
 
 **當前設定：**
 - 網路：ZetaChain Testnet
 - RPC URL：`https://zetachain-athens-evm.blockpi.network/v1/rpc/public`
 - 鏈 ID：7001
+- Uniswap V2 Router：`0x2ca7d64A7EFE2D62A725E2B35Cf7230D6677FfEe`
+- Uniswap V2 Factory：`0x9fd96203f7b22bCF72d9DCb40ff98302376cE09c`
 
 ### CONTRACTS
 儲存重要合約地址
@@ -163,19 +167,23 @@ Gas 限制配置
 5. **`balance.ts`** - 餘額查詢，使用 `CONFIG.RAILGUN_NETWORK`
 6. **`cross-chain-transfer.ts`** - 跨鏈轉帳，使用 `CONFIG.CHAINS`、`CONFIG.FEES`、`CONFIG.GAS`
 7. **`cross-chain-shield.ts`** - 跨鏈隱私保護，使用 `CONFIG.CONTRACTS`
-8. **`cross-chain-check.test.ts`** - 測試檔案，使用 `CONFIG.FEES`、`CONFIG.CHAINS`
-9. **`config.test.ts`** - 配置測試，使用 `CONFIG.CHAINS`
+8. **`liquidity.ts`** - DeFi 流動性操作，使用 `CONFIG.RAILGUN_NETWORK.UniswapV2Router`、`CONFIG.CHAINS`
+9. **`uniswap-pools.ts`** - Uniswap 池子查詢工具，使用 `CONFIG.RAILGUN_NETWORK.UniswapV2Factory`、`CONFIG.TOKENS`
+10. **`cross-chain-check.test.ts`** - 測試檔案，使用 `CONFIG.FEES`、`CONFIG.CHAINS`
+11. **`config.test.ts`** - 配置測試，使用 `CONFIG.CHAINS`
 
 ### React Hooks (hooks/)
 1. **`use-transfer-tx.ts`** - 轉帳交易 Hook，使用 `CONFIG.CHAINS`
 2. **`use-network-guard.ts`** - 網路守衛 Hook，使用 `CONFIG.CHAINS`
 3. **`use-network-sync.ts`** - 網路同步 Hook，使用 `CONFIG.CHAINS`
 4. **`use-shield-tx.ts`** - 隱私保護交易 Hook，使用 `CONFIG`
+5. **`use-liquidity-tx.ts`** - 流動性交易 Hook，使用 `CONFIG.CHAINS`、`CONFIG.RAILGUN_NETWORK`
 
 ### React 組件 (components/)
 1. **`cross-chain/transfer-form.tsx`** - 跨鏈轉帳表單組件，使用 `CONFIG`（包含 TOKENS、CHAINS、logoUrl、CHAIN_LOGO）
 2. **`cross-chain/shield-form.tsx`** - 隱私保護表單組件，使用 `CONFIG.CONTRACTS`、`CONFIG.CHAINS`（包含 CHAIN_LOGO）
-3. **`cross-chain/header.tsx`** - 頁面標頭組件，使用 `CONFIG.CHAINS`（包含 CHAIN_LOGO）進行網路切換
+3. **`cross-chain/liquidity-form.tsx`** - DeFi 流動性管理表單組件，使用 `CONFIG.TOKENS`、`CONFIG.RAILGUN_NETWORK`
+4. **`cross-chain/header.tsx`** - 頁面標頭組件，使用 `CONFIG.CHAINS`（包含 CHAIN_LOGO）進行網路切換
 
 ### 頁面組件 (app/)
 1. **`cross-chain/page.tsx`** - 跨鏈頁面，使用 `CONFIG.CHAINS`
@@ -196,6 +204,12 @@ Gas 限制配置
 - `CONFIG.FEES` 定義手續費率
 - `CONFIG.GAS` 設定 Gas 限制
 - 所有鏈 Logo 使用 Trust Wallet Assets 的 URL
+
+### DeFi 操作
+- `CONFIG.RAILGUN_NETWORK.UniswapV2Router` 提供 Uniswap V2 Router 合約地址，用於執行流動性操作
+- `CONFIG.RAILGUN_NETWORK.UniswapV2Factory` 提供 Uniswap V2 Factory 合約地址，用於查詢流動性池
+- `CONFIG.TOKENS` 提供代幣信息，用於生成常見代幣對和顯示池子信息
+- 支援多鏈操作：在 ZetaChain 上直接執行，在其他 EVM 鏈上透過 EVMAdapt 轉送到 ZetaChain
 
 ## 修改指南
 

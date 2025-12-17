@@ -5,6 +5,8 @@ export const CONFIG = {
         NAME: NetworkName.ZetachainTestnet,
         RPC_URL: "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
         CHAIN_ID: 7001,
+        UniswapV2Router: "0x2ca7d64A7EFE2D62A725E2B35Cf7230D6677FfEe",
+        UniswapV2Factory: "0x9fd96203f7b22bCF72d9DCb40ff98302376cE09c",
     },
     CONTRACTS: {
         TEST_ERC20: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0",
