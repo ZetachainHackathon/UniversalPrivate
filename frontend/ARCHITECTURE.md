@@ -89,13 +89,20 @@ Railgun Engine 是一個較重的 WASM後台進程。
 *   **`transfer-form.tsx`**: "隱私轉帳/跨鏈" 表單。負責收集接收方與金額，處理 0zk -> 0zk 轉帳或 Unshield 跨鏈操作。
 *   **`liquidity-form.tsx`**: "DeFi 操作" 表單。實現多階段操作流程，採用統一的卡片設計風格（黑色邊框、白色背景、陰影效果）：
     1.  **第一階段（category）**：DeFi 功能選擇頁面，顯示「流動性管理」選項（可點擊進入）和「Coming Soon」提示。所有卡片使用統一的設計風格。
-    2.  **第二階段（pool-selection）**：池子選擇介面，自動從 Uniswap V2 Factory 查詢並顯示所有可用的流動性池。用戶選擇池子後，自動填充代幣對信息。池子卡片採用統一的黑色邊框和陰影樣式。
-    3.  **第三階段（liquidity）**：流動性管理操作選擇，顯示選中的池子信息（統一卡片風格），提供「添加流動性」和「移除流動性」卡片式按鈕。
-    4.  **第四階段（add-liquidity-form）**：添加流動性表單，提供完整的 UI：
-       - **價格顯示**：位於表單頂部，顯示當前池子價格（雙向價格：A→B 和 B→A），使用統一的卡片風格。
-       - **代幣輸入**：兩個大型輸入框，每個輸入框標題右上角顯示餘額和 MAX 按鈕。
-       - **視覺連接**：兩個輸入框之間使用統一樣式的 "+" 圖標（黑色邊框、白色背景、陰影）表示配對。
-       - **自動計算**：始終啟用，根據池子當前價格自動計算另一邊的代幣數量（強制執行常數乘積公式）。
+    2.  **第二階段（pool-selection）**：池子選擇介面，自動從 Uniswap V2 Factory 查詢並顯示所有可用的流動性池。用戶選擇池子後，自動填充代幣對信息。池子卡片採用統一的黑色邊框和陰影樣式。支援池子快取機制，提升加載速度。
+    3.  **第三階段（liquidity-management）**：統整的流動性管理介面，包含：
+       - **池子信息顯示**：顯示選中的池子信息（統一卡片風格）。
+       - **LP Position 顯示**：如果用戶在該池子中有 LP Token，會顯示餘額、池子份額和可提取的代幣數量。
+       - **Tab 切換**：提供「添加流動性」和「移除流動性」兩個標籤頁。
+       - **添加流動性表單**：
+         *   **價格顯示**：位於表單頂部，顯示當前池子價格（雙向價格：A→B 和 B→A），使用統一的卡片風格。
+         *   **代幣輸入**：兩個大型輸入框，每個輸入框標題右上角顯示餘額和 MAX 按鈕。
+         *   **視覺連接**：兩個輸入框之間使用統一樣式的 "+" 圖標（黑色邊框、白色背景、陰影）表示配對。
+         *   **自動計算**：始終啟用，根據池子當前價格自動計算另一邊的代幣數量（強制執行常數乘積公式）。
+       - **移除流動性表單**：
+         *   **LP Token 輸入**：輸入要移除的 LP Token 數量，支援 MAX 按鈕。
+         *   **預期可提取代幣**：根據用戶輸入的 LP Token 數量，計算並顯示預期可提取的代幣數量。
+         *   **精確驗證**：使用 BigInt 進行精確驗證，避免浮點數精度問題。
        - **池子詳情**：位於表單底部，使用可折疊的 `<details>` 元素，包含儲備量、總 LP 供應量、用戶流動性等次要信息。
        - **多鏈支援**：在 ZetaChain 上直接執行，在其他 EVM 鏈上透過 EVMAdapt 轉送到 ZetaChain。
 
@@ -116,11 +123,12 @@ Railgun Engine 是一個較重的 WASM後台進程。
     *   生成 Zero-Knowledge Proof (運算密集型)。
     *   建構跨鏈 Unshield Transaction。
 *   **`use-liquidity-tx.ts`**: 封裝 DeFi 操作流程。
-    *   處理流動性添加的邏輯（移除流動性待實作）。
+    *   處理流動性添加和移除的完整邏輯。
     *   透過 RelayAdapt 的 multicall 功能與 DEX 合約交互。
-    *   確保代幣從 Railgun 隱私池中正確提取並提供到流動性池。
+    *   確保代幣從 Railgun 隱私池中正確提取並提供到流動性池（添加），或從流動性池移除並返回到 Railgun 隱私池（移除）。
     *   支援多鏈操作：自動判斷當前鏈類型，在 ZetaChain 上直接執行，在其他 EVM 鏈上透過 EVMAdapt 執行。
-    *   驗證代幣地址、金額，計算滑點保護，處理錯誤和 Toast 提示。
+    *   驗證代幣地址、金額、LP Token 餘額，計算滑點保護（預設 5%），處理錯誤和 Toast 提示。
+    *   提供 `executeAddLiquidity` 和 `executeRemoveLiquidity` 兩個主要函數。
 *   **`use-network-sync.ts`**: 確保 URL 路由與當前錢包網路一致。
 *   **`use-railgun-auto-scan.ts`**: 背景勾子，定時觸發餘額掃描與 Merkle Tree 重建。
 
@@ -134,16 +142,29 @@ Railgun Engine 是一個較重的 WASM後台進程。
     2.  建構對 `ZetachainAdapt` 合約的呼叫 (轉移資產)。
     3.  建構對 `EVMAdapt` 的 `unshieldOutsideChain` 呼叫。
 *   **`liquidity.ts`**: DeFi 操作封裝層。負責：
-    1.  生成 Unshield Proof 以從 Railgun 隱私池提取代幣。
-    2.  建構對 DEX 合約的調用（如 Uniswap V2 Router 的 `addLiquidity`）。
-    3.  透過 RelayAdapt 的 multicall 功能在單筆交易中完成 Unshield + DeFi 操作 + Shield（可選）。
-    4.  處理代幣對的比例計算和滑點保護（預設 5%）。
-    5.  支援多鏈操作：在 ZetaChain 上直接執行 `executeAddLiquidity`，在其他 EVM 鏈上透過 `executeAddLiquidityFromEvm` 執行。
+    1.  **添加流動性**：
+       *   生成 Unshield Proof 以從 Railgun 隱私池提取代幣。
+       *   建構對 DEX 合約的調用（如 Uniswap V2 Router 的 `addLiquidity`）。
+       *   透過 RelayAdapt 的 multicall 功能在單筆交易中完成 Unshield + Approve + addLiquidity。
+       *   處理代幣對的比例計算和滑點保護（預設 5%）。
+    2.  **移除流動性**：
+       *   生成 Unshield Proof 以從 Railgun 隱私池提取 LP Token。
+       *   建構對 DEX 合約的調用（如 Uniswap V2 Router 的 `removeLiquidity`）。
+       *   透過 RelayAdapt 的 multicall 功能在單筆交易中完成 Unshield + Approve + removeLiquidity。
+       *   處理手續費計算和滑點保護。
+    3.  **多鏈支援**：
+       *   在 ZetaChain 上直接執行 `executeAddLiquidity` / `executeRemoveLiquidity`。
+       *   在其他 EVM 鏈上透過 `executeAddLiquidityFromEvm` / `executeRemoveLiquidityFromEvm` 執行。
 *   **`uniswap-pools.ts`**: Uniswap 池子查詢工具。負責：
     1.  從 Uniswap V2 Factory 查詢流動性池地址和詳細信息。
     2.  獲取池子中的代幣對、儲備量、總供應量等信息。
     3.  生成常見代幣對列表（WZETA 與其他代幣）。
     4.  批量查詢池子信息，用於顯示池子選擇列表。
+*   **`pools-cache.ts`**: 池子快取管理工具。負責：
+    1.  提供雙層快取機制（記憶體快取 + LocalStorage 持久化）。
+    2.  快取過期時間管理（預設 5 分鐘）。
+    3.  按鏈 ID 隔離快取數據，支援多鏈環境。
+    4.  提升池子列表加載速度，減少不必要的鏈上查詢。
 *   **`db.ts`**: 配置 LevelDB 用於儲存加密數據。
 
 ## 4. UI 架構 (UI Architecture)
@@ -258,58 +279,75 @@ pnpm start
 4.  **DeFi 功能擴展**:
     *   ✅ 完成 `use-liquidity-tx.ts` hook 和 `liquidity.ts` 庫的實作。
     *   ✅ 實作流動性添加的完整交易邏輯（UI 和後端邏輯已完成）。
-    *   ✅ 實作池子選擇功能（從 Uniswap V2 Factory 查詢池子列表）。
+    *   ✅ 實作流動性移除的完整交易邏輯（UI 和後端邏輯已完成）。
+    *   ✅ 實作池子選擇功能（從 Uniswap V2 Factory 查詢池子列表，支援快取機制）。
     *   ✅ 支援多鏈操作（ZetaChain 直接執行，其他 EVM 鏈透過 EVMAdapt）。
-    *   ⏳ 實作流動性移除功能（目前顯示 Coming Soon）。
+    *   ✅ 實作 LP Position 顯示和餘額查詢功能。
     *   ⏳ 支援多種 DEX 協議（Uniswap V2/V3、ZetaSwap 等）。
     *   ⏳ 實作隱私代幣交換（Swap）功能（目前顯示 Coming Soon）。
     *   ⏳ 整合更多 DeFi 協議（借貸、質押等，目前顯示 Coming Soon）。
 
 ---
 
-*最後更新: 2025 年 1 月（統一卡片風格、優化價格顯示位置、改進 UI/UX）*
+*最後更新: 2025 年 1 月（完成移除流動性功能、統一卡片風格、優化價格顯示位置、改進 UI/UX、添加池子快取機制）*
 
 ## 8. DeFi 操作流程詳解 (DeFi Operations Flow)
 
 ### 8.1 流動性管理流程
 
-流動性管理功能採用多階段操作流程，提供清晰的用戶體驗：
+流動性管理功能採用三階段操作流程，提供清晰的用戶體驗：
 
 1. **DeFi 功能選擇（category）**
    - 用戶選擇「流動性管理」進入池子選擇階段
    - 其他功能顯示「Coming Soon」
 
 2. **池子選擇（pool-selection）**
-   - 自動從 Uniswap V2 Factory 查詢所有可用池子
+   - 自動從 Uniswap V2 Factory 查詢所有可用池子（支援快取機制，提升加載速度）
    - 顯示池子中的代幣對、Logo 和地址
-   - 用戶選擇池子後，自動填充代幣對信息
+   - 用戶選擇池子後，自動填充代幣對信息並進入流動性管理介面
 
-3. **操作選擇（liquidity）**
-   - 顯示選中的池子信息（漸變背景，突出顯示）
-   - 提供「添加流動性」和「移除流動性」卡片式按鈕
-   - 點擊「添加流動性」直接進入表單
-
-4. **添加流動性表單（add-liquidity-form）**
-   - **價格顯示**：位於表單頂部，使用統一卡片風格，顯示當前池子價格（雙向：1 TokenA = X TokenB 和 1 TokenB = Y TokenA）
-   - **代幣輸入區域**：
-     *   代幣 A 和代幣 B 的大型輸入框
-     *   每個輸入框標題右上角顯示餘額和 MAX 按鈕
-     *   兩個輸入框之間使用統一樣式的 "+" 圖標（黑色邊框、白色背景、陰影）表示配對
-   - **自動計算**：始終啟用，根據池子當前價格自動計算另一邊的代幣數量（強制執行常數乘積公式，無需切換開關）
+3. **流動性管理（liquidity-management）**
+   - **池子信息顯示**：顯示選中的池子信息（統一卡片風格）
+   - **LP Position 顯示**：如果用戶在該池子中有 LP Token，會顯示：
+     *   LP Token 餘額
+     *   池子份額（百分比）
+     *   可提取的代幣數量（TokenA 和 TokenB）
+     *   支援手動刷新餘額
+   - **Tab 切換**：提供「添加流動性」和「移除流動性」兩個標籤頁
+   - **添加流動性表單**：
+     *   **價格顯示**：位於表單頂部，使用統一卡片風格，顯示當前池子價格（雙向：1 TokenA = X TokenB 和 1 TokenB = Y TokenA）
+     *   **代幣輸入區域**：
+       - 代幣 A 和代幣 B 的大型輸入框
+       - 每個輸入框標題右上角顯示餘額和 MAX 按鈕
+       - 兩個輸入框之間使用統一樣式的 "+" 圖標（黑色邊框、白色背景、陰影）表示配對
+     *   **自動計算**：始終啟用，根據池子當前價格自動計算另一邊的代幣數量（強制執行常數乘積公式，無需切換開關）
+   - **移除流動性表單**：
+     *   **LP Token 輸入**：輸入要移除的 LP Token 數量，支援 MAX 按鈕
+     *   **預期可提取代幣**：根據用戶輸入的 LP Token 數量，計算並顯示預期可提取的代幣數量（TokenA 和 TokenB）
+     *   **精確驗證**：使用 BigInt 進行精確驗證，避免浮點數精度問題
+     *   **無流動性提示**：如果用戶沒有 LP Token，顯示友好的提示信息
    - **池子詳情**：位於表單底部，使用可折疊的 `<details>` 元素，包含儲備量、總 LP 供應量、用戶流動性等次要信息
    - **多鏈支援**：在 ZetaChain 上直接執行，在其他 EVM 鏈上透過 EVMAdapt 轉送
 
 ### 8.2 多鏈支援機制
 
-DeFi 操作支援多鏈執行：
+DeFi 操作（添加和移除流動性）支援多鏈執行：
 
-- **ZetaChain 本地執行**：直接調用 `executeAddLiquidity`，在 ZetaChain 上執行交易
-- **其他 EVM 鏈執行**：透過 `executeAddLiquidityFromEvm`，使用 EVMAdapt 將交易轉送到 ZetaChain 執行
+- **ZetaChain 本地執行**：
+  *   添加流動性：直接調用 `executeAddLiquidity`，在 ZetaChain 上執行交易
+  *   移除流動性：直接調用 `executeRemoveLiquidity`，在 ZetaChain 上執行交易
+- **其他 EVM 鏈執行**：
+  *   添加流動性：透過 `executeAddLiquidityFromEvm`，使用 EVMAdapt 將交易轉送到 ZetaChain 執行
+  *   移除流動性：透過 `executeRemoveLiquidityFromEvm`，使用 EVMAdapt 將交易轉送到 ZetaChain 執行
 - **自動判斷**：系統自動檢測當前連接的鏈，選擇適當的執行方式
 
 ### 8.3 技術實現
 
-- **池子查詢**：使用 `uniswap-pools.ts` 從 Factory 合約查詢池子信息
+- **池子查詢**：使用 `uniswap-pools.ts` 從 Factory 合約查詢池子信息，支援快取機制（`pools-cache.ts`）提升性能
 - **交易構建**：使用 `liquidity.ts` 構建 RelayAdapt multicall 交易
+  *   添加流動性：Unshield + Approve + addLiquidity
+  *   移除流動性：Unshield (LP Token) + Approve + removeLiquidity
 - **零知識證明**：在客戶端生成 Unshield Proof，保護隱私
-- **滑點保護**：預設 5% 滑點保護，可配置
+- **滑點保護**：預設 5% 滑點保護（500 basis points），可配置
+- **精確計算**：使用 BigInt 進行所有金額計算，避免浮點數精度問題
+- **LP Token 管理**：自動查詢和顯示用戶的 LP Token 餘額，計算池子份額和可提取代幣數量

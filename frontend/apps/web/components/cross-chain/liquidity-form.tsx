@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@repo/ui/components/button";
 import { CONFIG } from "@/config/env";
-import { ZeroAddress, formatUnits } from "ethers";
+import { ZeroAddress, formatUnits, parseUnits } from "ethers";
 import { getTokenLogoUrl, getTokenSymbol, getAllConfiguredTokens } from "@/lib/railgun/token-utils";
 import { useWallet } from "@/components/providers/wallet-provider";
 import { getCommonTokenPairs, getPoolsInfo, type PoolInfo } from "@/lib/railgun/uniswap-pools";
 import { getCachedPools, setCachedPools } from "@/lib/railgun/pools-cache";
 
-type LiquidityFunction = "add-liquidity" | "remove-liquidity";
-type Stage = "category" | "liquidity" | "pool-selection" | "add-liquidity-form";
+type Stage = "category" | "pool-selection" | "liquidity-management";
 
 interface LiquidityFormProps {
     selectedChain: string;
@@ -16,6 +15,19 @@ interface LiquidityFormProps {
     balances: any;
     handleAddLiquidity: () => void;
     isLoading: boolean;
+    isLoadingRemove: boolean;
+    executeAddLiquidity: (params: {
+        tokenA: string;
+        tokenB: string;
+        amountA: string;
+        amountB: string;
+    }) => Promise<void>;
+    executeRemoveLiquidity: (params: {
+        tokenA: string;
+        tokenB: string;
+        liquidity: string;
+    }) => Promise<void>;
+    onRefresh?: () => Promise<void>; // 可選的刷新函數
 }
 
 export function LiquidityForm({
@@ -24,6 +36,10 @@ export function LiquidityForm({
     balances,
     handleAddLiquidity,
     isLoading,
+    isLoadingRemove,
+    executeAddLiquidity,
+    executeRemoveLiquidity,
+    onRefresh,
 }: LiquidityFormProps) {
     const { signer } = useWallet();
 
@@ -36,6 +52,9 @@ export function LiquidityForm({
     // 狀態：池子列表
     const [pools, setPools] = useState<PoolInfo[]>([]);
     const [isLoadingPools, setIsLoadingPools] = useState(false);
+    
+    // 狀態：當前操作模式（添加或移除流動性）
+    const [activeTab, setActiveTab] = useState<"add" | "remove">("add");
 
     // 獲取有餘額的代幣列表（帶餘額信息）
     const tokensWithBalance = useMemo(() => {
@@ -84,14 +103,12 @@ export function LiquidityForm({
         ];
     }, [tokensWithBalance]);
 
-    // 狀態：流動性管理功能選擇
-    const [liquidityFunction, setLiquidityFunction] = useState<LiquidityFunction>("add-liquidity");
-
     // 狀態：代幣對選擇
     const [tokenA, setTokenA] = useState<string>(ZeroAddress);
     const [tokenB, setTokenB] = useState<string>(ZeroAddress);
     const [amountA, setAmountA] = useState("0.01");
     const [amountB, setAmountB] = useState("0.01");
+    const [amountLiquidity, setAmountLiquidity] = useState("");
 
     // DeFi 類別選項（第一階段）
     const defiCategories = [
@@ -103,21 +120,6 @@ export function LiquidityForm({
         },
     ];
 
-    // 流動性管理功能選項（第二階段）
-    const liquidityOptions = [
-        {
-            value: "add-liquidity" as LiquidityFunction,
-            label: "添加流動性 (Add Liquidity)",
-            protocol: "Uniswap V2",
-            available: true,
-        },
-        {
-            value: "remove-liquidity" as LiquidityFunction,
-            label: "移除流動性 (Remove Liquidity)",
-            protocol: "Uniswap V2",
-            available: false,
-        },
-    ];
 
     // 獲取代幣餘額（格式化）
     const getTokenBalance = (tokenAddr: string): string => {
@@ -202,17 +204,78 @@ export function LiquidityForm({
 
     // 獲取用戶的 LP Token 餘額
     const userLPTokenBalance = useMemo(() => {
-        if (!selectedPool || !balances?.erc20Amounts) return null;
+        if (!selectedPool || !balances?.erc20Amounts) {
+            console.log("🔍 LP Token 查詢: 缺少 selectedPool 或 balances", {
+                hasSelectedPool: !!selectedPool,
+                hasBalances: !!balances,
+                hasErc20Amounts: !!balances?.erc20Amounts,
+                balanceBucket: balances?.balanceBucket,
+            });
+            return null;
+        }
+        
+        // 檢查 balanceBucket 是否為 "Spendable"
+        if (balances.balanceBucket !== "Spendable") {
+            console.log("⚠️ 餘額不是 Spendable，當前 balanceBucket:", balances.balanceBucket);
+            // 即使不是 Spendable，我們也嘗試查找，因為可能還在 ShieldPending
+        }
+        
+        const pairAddressLower = selectedPool.pairAddress.toLowerCase();
+        console.log("🔍 查詢 LP Token:", {
+            pairAddress: selectedPool.pairAddress,
+            pairAddressLower,
+            balanceBucket: balances.balanceBucket,
+            allTokens: balances.erc20Amounts.map((t: any) => ({
+                address: t.tokenAddress,
+                addressLower: t.tokenAddress.toLowerCase(),
+                amount: t.amount.toString(),
+            })),
+        });
         
         const lpToken = balances.erc20Amounts.find(
-            (token: any) => token.tokenAddress.toLowerCase() === selectedPool.pairAddress.toLowerCase()
+            (token: any) => token.tokenAddress.toLowerCase() === pairAddressLower
         );
         
-        if (!lpToken || lpToken.amount === 0n) return null;
+        if (!lpToken) {
+            console.log("⚠️ 未找到 LP Token 在餘額中", {
+                searchedAddress: pairAddressLower,
+                availableAddresses: balances.erc20Amounts.map((t: any) => t.tokenAddress.toLowerCase()),
+            });
+            return null;
+        }
+        
+        if (lpToken.amount === 0n) {
+            console.log("⚠️ LP Token 餘額為 0");
+            return null;
+        }
+        
+        console.log("✅ 找到 LP Token:", {
+            address: lpToken.tokenAddress,
+            amount: lpToken.amount.toString(),
+            balanceBucket: balances.balanceBucket,
+        });
         
         // LP Token 通常是 18 decimals
         const decimals = 18;
         return formatUnits(lpToken.amount, decimals);
+    }, [selectedPool, balances]);
+
+    // 獲取用戶 LP Token 的原始 bigint 值（用於精確驗證）
+    const userLPTokenBalanceBigInt = useMemo(() => {
+        if (!selectedPool || !balances?.erc20Amounts) {
+            return null;
+        }
+        
+        const pairAddressLower = selectedPool.pairAddress.toLowerCase();
+        const lpToken = balances.erc20Amounts.find(
+            (token: any) => token.tokenAddress.toLowerCase() === pairAddressLower
+        );
+        
+        if (!lpToken || lpToken.amount === 0n) {
+            return null;
+        }
+        
+        return lpToken.amount;
     }, [selectedPool, balances]);
 
     // 計算池子狀態信息
@@ -368,89 +431,6 @@ export function LiquidityForm({
                 </>
             )}
 
-            {/* 第三階段：流動性管理操作選擇（選完池子後） */}
-            {currentStage === "liquidity" && selectedPool && (
-                <div className="space-y-6">
-                    {/* 返回按鈕 */}
-                    <button
-                        type="button"
-                        onClick={() => setCurrentStage("pool-selection")}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-colors mb-2"
-                    >
-                        <span>←</span>
-                        <span>返回選擇池子</span>
-                    </button>
-
-                    {/* 顯示選中的池子信息 */}
-                    <div className="p-4 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-6">
-                        <div className="text-xs font-bold mb-3 text-gray-600 uppercase tracking-wide">選中的池子 (Selected Pool)</div>
-                        <div className="flex items-center gap-3">
-                            {selectedPool.token0LogoUrl && (
-                                <img src={selectedPool.token0LogoUrl} alt={selectedPool.token0Symbol} className="w-8 h-8 rounded-full" />
-                            )}
-                            <span className="font-bold text-lg">{selectedPool.token0Symbol}</span>
-                            <span className="text-gray-400 text-xl">/</span>
-                            {selectedPool.token1LogoUrl && (
-                                <img src={selectedPool.token1LogoUrl} alt={selectedPool.token1Symbol} className="w-8 h-8 rounded-full" />
-                            )}
-                            <span className="font-bold text-lg">{selectedPool.token1Symbol}</span>
-                        </div>
-                    </div>
-
-                    {/* 標題 */}
-                    <div className="text-center mb-4">
-                        <h2 className="text-2xl font-bold mb-2">選擇操作 (Select Operation)</h2>
-                        <p className="text-gray-600 text-sm">
-                            選擇要對該池子執行的操作
-                        </p>
-                    </div>
-
-                    {/* 操作選擇 - 改為卡片式按鈕 */}
-                    <div className="space-y-3">
-                        <label className="text-sm font-bold">流動性操作 (Liquidity Operations)</label>
-                        <div className="space-y-2">
-                            {liquidityOptions.map((option) => (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() => {
-                                        if (option.available) {
-                                            setLiquidityFunction(option.value);
-                                            if (option.value === "add-liquidity") {
-                                                // 選擇添加流動性後，直接進入添加流動性表單
-                                                setCurrentStage("add-liquidity-form");
-                                            }
-                                        }
-                                    }}
-                                    disabled={!option.available}
-                                    className={`w-full text-left p-5 border-2 rounded-lg transition-all ${
-                                        option.available
-                                            ? "border-black bg-white hover:bg-gray-50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
-                                            : "border-black bg-white opacity-50 cursor-not-allowed shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-1">
-                                            <div className="font-bold text-lg mb-1">{option.label}</div>
-                                            <div className="text-xs text-gray-500">{option.protocol}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {!option.available && (
-                                                <span className="text-xs bg-yellow-100 text-yellow-800 px-3 py-1 rounded font-bold">
-                                                    Coming Soon
-                                                </span>
-                                            )}
-                                            {option.available && (
-                                                <span className="text-gray-400 text-xl">→</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* 第二階段：池子選擇 */}
             {currentStage === "pool-selection" && (
@@ -497,8 +477,9 @@ export function LiquidityForm({
                                             // 注意：需要確保順序正確
                                             setTokenA(pool.token0);
                                             setTokenB(pool.token1);
-                                            // 選完池子後，進入流動性管理操作選擇階段
-                                            setCurrentStage("liquidity");
+                                            // 選完池子後，直接進入統整的流動性管理畫面
+                                            setCurrentStage("liquidity-management");
+                                            setActiveTab("add"); // 默認顯示添加流動性
                                         }}
                                         className="w-full text-left p-4 border-2 border-black rounded-lg transition-all bg-white hover:bg-gray-50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
                                     >
@@ -541,168 +522,439 @@ export function LiquidityForm({
                 </div>
             )}
 
-            {/* 根據選擇的功能顯示對應的表單 */}
-                {currentStage === "add-liquidity-form" && liquidityFunction === "add-liquidity" && (
+            {/* 統整的流動性管理畫面 */}
+            {currentStage === "liquidity-management" && selectedPool && (
                 <div className="space-y-6">
                     {/* 返回按鈕 */}
                     <button
                         type="button"
-                        onClick={() => setCurrentStage("liquidity")}
+                        onClick={() => setCurrentStage("pool-selection")}
                         className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-colors mb-2"
                     >
                         <span>←</span>
-                        <span>返回</span>
+                        <span>返回選擇池子</span>
                     </button>
 
-                    {/* 簡化的池子信息（僅顯示代幣對，次要信息） */}
+                    {/* 池子信息 */}
                     {selectedPool && (
-                        <div className="mb-4">
-                            <div className="p-3 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
+                        <div className="p-4 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <div className="text-xs font-bold mb-3 text-gray-600 uppercase tracking-wide">選中的池子 (Selected Pool)</div>
+                            <div className="flex items-center gap-3">
                                 {selectedPool.token0LogoUrl && (
-                                    <img src={selectedPool.token0LogoUrl} alt={selectedPool.token0Symbol} className="w-5 h-5 rounded-full" />
+                                    <img src={selectedPool.token0LogoUrl} alt={selectedPool.token0Symbol} className="w-8 h-8 rounded-full" />
                                 )}
-                                <span className="text-sm font-bold">{selectedPool.token0Symbol}</span>
-                                <span className="text-gray-400">/</span>
+                                <span className="font-bold text-lg">{selectedPool.token0Symbol}</span>
+                                <span className="text-gray-400 text-xl">/</span>
                                 {selectedPool.token1LogoUrl && (
-                                    <img src={selectedPool.token1LogoUrl} alt={selectedPool.token1Symbol} className="w-5 h-5 rounded-full" />
+                                    <img src={selectedPool.token1LogoUrl} alt={selectedPool.token1Symbol} className="w-8 h-8 rounded-full" />
                                 )}
-                                <span className="text-sm font-bold">{selectedPool.token1Symbol}</span>
+                                <span className="font-bold text-lg">{selectedPool.token1Symbol}</span>
                             </div>
                         </div>
                     )}
 
-                    {/* 主要輸入區域 - 垂直布局，突出顯示 */}
-                    <div className="space-y-4">
-                        {/* 價格顯示 - 移到上方 */}
-                        {poolStats && poolStats.currentPrice > 0 && selectedPool && (
-                            <div className="bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3 mb-2">
-                                <div className="text-center space-y-2">
-                                    {/* 主要價格顯示 */}
-                                    <div className="flex items-center justify-center gap-2">
-                                        <div className="flex items-center gap-1.5">
-                                            {selectedPool.token0LogoUrl && (
-                                                <img 
-                                                    src={selectedPool.token0LogoUrl} 
-                                                    alt={selectedPool.token0Symbol} 
-                                                    className="w-4 h-4 rounded-full"
-                                                />
-                                            )}
-                                            <span className="text-sm font-bold">1 {selectedPool.token0Symbol}</span>
-                                        </div>
-                                        <span className="text-gray-400">=</span>
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm font-bold text-purple-600">{poolStats.currentPrice.toFixed(6)}</span>
-                                            {selectedPool.token1LogoUrl && (
-                                                <img 
-                                                    src={selectedPool.token1LogoUrl} 
-                                                    alt={selectedPool.token1Symbol} 
-                                                    className="w-4 h-4 rounded-full"
-                                                />
-                                            )}
-                                            <span className="text-sm font-bold">{selectedPool.token1Symbol}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* 反向價格（較小字體，次要信息） */}
-                                    <div className="text-xs text-gray-500">
-                                        1 {selectedPool.token1Symbol} = {(1 / poolStats.currentPrice).toFixed(6)} {selectedPool.token0Symbol}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 代幣 A 輸入 */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    {tokenAInfo.logoUrl && (
-                                        <img 
-                                            src={tokenAInfo.logoUrl} 
-                                            alt="Token A"
-                                            className="w-6 h-6 rounded-full"
-                                        />
-                                    )}
-                                    <label className="font-bold text-lg">{tokenAInfo.symbol || "Token A"}</label>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs text-gray-500">
-                                        餘額: {parseFloat(tokenABalance).toFixed(6)}
-                                    </span>
+                    {/* LP Position 顯示 */}
+                    {poolStats && poolStats.userLPTokenBalance && parseFloat(poolStats.userLPTokenBalance) > 0 && (
+                        <div className="p-4 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="text-xs font-bold text-gray-600 uppercase tracking-wide">您的流動性位置 (Your LP Position)</div>
+                                {onRefresh && (
                                     <button
                                         type="button"
-                                        onClick={() => setAmountA(tokenABalance)}
-                                        className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                                        onClick={async () => {
+                                            try {
+                                                await onRefresh();
+                                            } catch (error) {
+                                                console.error("刷新失敗:", error);
+                                            }
+                                        }}
+                                        className="text-xs font-bold text-gray-600 hover:text-black underline"
                                     >
-                                        MAX
+                                        刷新餘額
                                     </button>
-                                </div>
+                                )}
                             </div>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    step="any"
-                                    value={amountA}
-                                    onChange={(e) => setAmountA(e.target.value)}
-                                    placeholder="0.0"
-                                    className="w-full p-5 border-2 border-black rounded-xl text-2xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
-                                />
-                            </div>
-                        </div>
-
-                        {/* "+" 圖標 - 在兩個輸入框之間 */}
-                        <div className="flex items-center justify-center py-1">
-                            <div className="w-8 h-8 rounded-full bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
-                                <span className="text-lg font-bold">+</span>
-                            </div>
-                        </div>
-
-                        {/* 代幣 B 輸入 */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    {tokenBInfo.logoUrl && (
-                                        <img 
-                                            src={tokenBInfo.logoUrl} 
-                                            alt="Token B"
-                                            className="w-6 h-6 rounded-full"
-                                        />
-                                    )}
-                                    <label className="font-bold text-lg">{tokenBInfo.symbol || "Token B"}</label>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs text-gray-500">
-                                        餘額: {parseFloat(tokenBBalance).toFixed(6)}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-700">LP Token 餘額:</span>
+                                    <span className="font-bold text-lg text-black">
+                                        {parseFloat(poolStats.userLPTokenBalance).toFixed(6)} LP
                                     </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAmountB(tokenBBalance)}
-                                        className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
-                                    >
-                                        MAX
-                                    </button>
                                 </div>
-                            </div>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    step="any"
-                                    value={amountB}
-                                    onChange={(e) => setAmountB(e.target.value)}
-                                    placeholder="0.0"
-                                    className="w-full p-5 border-2 border-black rounded-xl text-2xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
-                                />
+                                {poolStats.userShare !== null && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-700">池子份額:</span>
+                                        <span className="font-bold text-black">
+                                            {poolStats.userShare.toFixed(4)}%
+                                        </span>
+                                    </div>
+                                )}
+                                {poolStats.userToken0Amount && poolStats.userToken1Amount && (
+                                    <div className="pt-3 border-t border-gray-200">
+                                        <div className="text-xs font-bold text-gray-600 mb-2">可提取代幣:</div>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1">
+                                                    {selectedPool.token0LogoUrl && (
+                                                        <img src={selectedPool.token0LogoUrl} alt={selectedPool.token0Symbol} className="w-4 h-4 rounded-full" />
+                                                    )}
+                                                    <span className="text-sm text-gray-700">{selectedPool.token0Symbol}:</span>
+                                                </div>
+                                                <span className="font-bold text-sm text-black">
+                                                    {poolStats.userToken0Amount}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1">
+                                                    {selectedPool.token1LogoUrl && (
+                                                        <img src={selectedPool.token1LogoUrl} alt={selectedPool.token1Symbol} className="w-4 h-4 rounded-full" />
+                                                    )}
+                                                    <span className="text-sm text-gray-700">{selectedPool.token1Symbol}:</span>
+                                                </div>
+                                                <span className="font-bold text-sm text-black">
+                                                    {poolStats.userToken1Amount}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
+                    )}
+
+                    {/* Tab 切換 */}
+                    <div className="flex gap-2 border-b-2 border-black">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("add")}
+                            className={`flex-1 py-3 font-bold transition-all ${
+                                activeTab === "add"
+                                    ? "bg-black text-white border-b-4 border-black"
+                                    : "bg-white text-gray-600 hover:bg-gray-50"
+                            }`}
+                        >
+                            添加流動性 (Add Liquidity)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab("remove")}
+                            className={`flex-1 py-3 font-bold transition-all ${
+                                activeTab === "remove"
+                                    ? "bg-black text-white border-b-4 border-black"
+                                    : "bg-white text-gray-600 hover:bg-gray-50"
+                            }`}
+                        >
+                            移除流動性 (Remove Liquidity)
+                        </button>
                     </div>
 
-                    {/* 發送按鈕 */}
-                    <Button
-                        onClick={handleAddLiquidity}
-                        disabled={isLoading || !tokenA || !tokenB || !amountA || !amountB}
-                        className="w-full py-6 text-xl font-bold bg-black text-white hover:bg-gray-800 border-2 border-transparent shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? "處理中..." : "添加流動性 (Add Liquidity)"}
-                    </Button>
+                    {/* 添加流動性表單 */}
+                    {activeTab === "add" && (
+                        <>
+                            {/* 主要輸入區域 - 垂直布局，突出顯示 */}
+                            <div className="space-y-4">
+                                {/* 價格顯示 - 移到上方 */}
+                                {poolStats && poolStats.currentPrice > 0 && selectedPool && (
+                                    <div className="bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-3 mb-2">
+                                        <div className="text-center space-y-2">
+                                            {/* 主要價格顯示 */}
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    {selectedPool.token0LogoUrl && (
+                                                        <img 
+                                                            src={selectedPool.token0LogoUrl} 
+                                                            alt={selectedPool.token0Symbol} 
+                                                            className="w-4 h-4 rounded-full"
+                                                        />
+                                                    )}
+                                                    <span className="text-sm font-bold">1 {selectedPool.token0Symbol}</span>
+                                                </div>
+                                                <span className="text-gray-400">=</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-sm font-bold text-purple-600">{poolStats.currentPrice.toFixed(6)}</span>
+                                                    {selectedPool.token1LogoUrl && (
+                                                        <img 
+                                                            src={selectedPool.token1LogoUrl} 
+                                                            alt={selectedPool.token1Symbol} 
+                                                            className="w-4 h-4 rounded-full"
+                                                        />
+                                                    )}
+                                                    <span className="text-sm font-bold">{selectedPool.token1Symbol}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* 反向價格（較小字體，次要信息） */}
+                                            <div className="text-xs text-gray-500">
+                                                1 {selectedPool.token1Symbol} = {(1 / poolStats.currentPrice).toFixed(6)} {selectedPool.token0Symbol}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 代幣 A 輸入 */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            {tokenAInfo.logoUrl && (
+                                                <img 
+                                                    src={tokenAInfo.logoUrl} 
+                                                    alt="Token A"
+                                                    className="w-6 h-6 rounded-full"
+                                                />
+                                            )}
+                                            <label className="font-bold text-lg">{tokenAInfo.symbol || "Token A"}</label>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs text-gray-500">
+                                                餘額: {parseFloat(tokenABalance).toFixed(6)}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAmountA(tokenABalance)}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                MAX
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            value={amountA}
+                                            onChange={(e) => setAmountA(e.target.value)}
+                                            placeholder="0.0"
+                                            className="w-full p-5 border-2 border-black rounded-xl text-2xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* "+" 圖標 - 在兩個輸入框之間 */}
+                                <div className="flex items-center justify-center py-1">
+                                    <div className="w-8 h-8 rounded-full bg-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center">
+                                        <span className="text-lg font-bold">+</span>
+                                    </div>
+                                </div>
+
+                                {/* 代幣 B 輸入 */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            {tokenBInfo.logoUrl && (
+                                                <img 
+                                                    src={tokenBInfo.logoUrl} 
+                                                    alt="Token B"
+                                                    className="w-6 h-6 rounded-full"
+                                                />
+                                            )}
+                                            <label className="font-bold text-lg">{tokenBInfo.symbol || "Token B"}</label>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs text-gray-500">
+                                                餘額: {parseFloat(tokenBBalance).toFixed(6)}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAmountB(tokenBBalance)}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                MAX
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            value={amountB}
+                                            onChange={(e) => setAmountB(e.target.value)}
+                                            placeholder="0.0"
+                                            className="w-full p-5 border-2 border-black rounded-xl text-2xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 發送按鈕 */}
+                            <Button
+                                onClick={async () => {
+                                    if (!tokenA || !tokenB || !amountA || !amountB) {
+                                        return;
+                                    }
+                                    try {
+                                        await executeAddLiquidity({
+                                            tokenA,
+                                            tokenB,
+                                            amountA,
+                                            amountB,
+                                        });
+                                    } catch (error) {
+                                        console.error("Add Liquidity failed:", error);
+                                    }
+                                }}
+                                disabled={isLoading || !tokenA || !tokenB || !amountA || !amountB || parseFloat(amountA) <= 0 || parseFloat(amountB) <= 0}
+                                className="w-full py-6 text-xl font-bold bg-black text-white hover:bg-gray-800 border-2 border-transparent shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isLoading ? "處理中..." : "添加流動性 (Add Liquidity)"}
+                            </Button>
+                        </>
+                    )}
+
+                    {/* 移除流動性表單 */}
+                    {activeTab === "remove" && (
+                        <div className="space-y-6">
+                            {poolStats && poolStats.userLPTokenBalance && parseFloat(poolStats.userLPTokenBalance) > 0 ? (
+                                <div className="bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] p-6">
+                                    <div className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-4">移除流動性</div>
+                                    
+                                    {/* LP Token 輸入 */}
+                                    <div className="mb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="text-sm font-bold text-gray-700">LP Token 數量</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-gray-500">
+                                                    餘額: {parseFloat(poolStats.userLPTokenBalance).toFixed(6)}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        // 直接使用格式化後的字符串值，避免浮點數精度問題
+                                                        if (poolStats.userLPTokenBalance) {
+                                                            setAmountLiquidity(poolStats.userLPTokenBalance);
+                                                        }
+                                                    }}
+                                                    className="text-xs font-bold text-gray-600 hover:text-black underline"
+                                                >
+                                                    MAX
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <input
+                                            type="number"
+                                            value={amountLiquidity}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                // 如果輸入的值超過餘額，自動限制為餘額（使用 bigint 精確比較）
+                                                if (userLPTokenBalanceBigInt && value) {
+                                                    try {
+                                                        const inputBigInt = parseUnits(value, 18);
+                                                        if (inputBigInt > userLPTokenBalanceBigInt) {
+                                                            // 使用原始餘額的格式化字符串
+                                                            setAmountLiquidity(poolStats.userLPTokenBalance || "");
+                                                        } else {
+                                                            setAmountLiquidity(value);
+                                                        }
+                                                    } catch {
+                                                        // 如果解析失敗，允許輸入（讓用戶繼續輸入）
+                                                        setAmountLiquidity(value);
+                                                    }
+                                                } else {
+                                                    setAmountLiquidity(value);
+                                                }
+                                            }}
+                                            placeholder="0.0"
+                                            min="0"
+                                            max={poolStats.userLPTokenBalance ? parseFloat(poolStats.userLPTokenBalance) : undefined}
+                                            step="0.000001"
+                                            className="w-full p-5 border-2 border-black rounded-xl text-2xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 bg-white"
+                                        />
+                                    </div>
+
+                                    {/* 預期可提取的代幣數量 */}
+                                    {amountLiquidity && parseFloat(amountLiquidity) > 0 && poolStats && (
+                                        <div className="p-4 bg-gray-50 border-2 border-gray-300 rounded-lg mb-4">
+                                            <div className="text-xs font-bold text-gray-600 mb-2">預期可提取:</div>
+                                            <div className="space-y-2">
+                                                {poolStats.userToken0Amount && poolStats.userToken1Amount && (
+                                                    <>
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                {selectedPool?.token0LogoUrl && (
+                                                                    <img src={selectedPool.token0LogoUrl} alt={selectedPool.token0Symbol} className="w-5 h-5 rounded-full" />
+                                                                )}
+                                                                <span className="text-sm text-gray-700">{selectedPool?.token0Symbol}:</span>
+                                                            </div>
+                                                            <span className="font-bold text-sm">
+                                                                {((parseFloat(poolStats.userToken0Amount) * parseFloat(amountLiquidity)) / parseFloat(poolStats.userLPTokenBalance)).toFixed(6)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                {selectedPool?.token1LogoUrl && (
+                                                                    <img src={selectedPool.token1LogoUrl} alt={selectedPool.token1Symbol} className="w-5 h-5 rounded-full" />
+                                                                )}
+                                                                <span className="text-sm text-gray-700">{selectedPool?.token1Symbol}:</span>
+                                                            </div>
+                                                            <span className="font-bold text-sm">
+                                                                {((parseFloat(poolStats.userToken1Amount) * parseFloat(amountLiquidity)) / parseFloat(poolStats.userLPTokenBalance)).toFixed(6)}
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 提交按鈕 */}
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            if (!selectedPool || !amountLiquidity || parseFloat(amountLiquidity) <= 0) {
+                                                return;
+                                            }
+                                            
+                                            // 使用 bigint 精確驗證，避免浮點數精度問題
+                                            if (userLPTokenBalanceBigInt && amountLiquidity) {
+                                                try {
+                                                    const inputBigInt = parseUnits(amountLiquidity, 18);
+                                                    if (inputBigInt > userLPTokenBalanceBigInt) {
+                                                        alert("LP Token 數量不能超過您的餘額");
+                                                        return;
+                                                    }
+                                                } catch (error) {
+                                                    alert("請輸入有效的 LP Token 數量");
+                                                    return;
+                                                }
+                                            }
+
+                                            await executeRemoveLiquidity({
+                                                tokenA: selectedPool.token0,
+                                                tokenB: selectedPool.token1,
+                                                liquidity: amountLiquidity,
+                                            });
+                                        }}
+                                        disabled={(() => {
+                                            if (isLoadingRemove || !amountLiquidity || !userLPTokenBalanceBigInt) return true;
+                                            try {
+                                                const inputBigInt = parseUnits(amountLiquidity, 18);
+                                                return inputBigInt <= 0n || inputBigInt > userLPTokenBalanceBigInt;
+                                            } catch {
+                                                return true;
+                                            }
+                                        })()}
+                                        className="w-full py-6 text-xl font-bold bg-black text-white hover:bg-gray-800 border-2 border-transparent shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isLoadingRemove ? "處理中..." : "移除流動性"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="p-8 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-center">
+                                    <div className="text-4xl mb-4">💧</div>
+                                    <h3 className="text-xl font-bold mb-2">沒有流動性</h3>
+                                    <p className="text-gray-600 mb-4">
+                                        您目前在這個池子中沒有 LP Token。請先添加流動性。
+                                    </p>
+                                    {balances && balances.balanceBucket !== "Spendable" && (
+                                        <div className="mt-4 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                                            <p className="text-xs text-blue-800">
+                                                💡 提示：您的 LP Token 可能還在 {balances.balanceBucket} 狀態。請等待 Shield 完成後再查看。
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* 池子狀態信息 - 移到底部，視覺上次要化（可折疊） */}
                     {selectedPool && poolStats && (
@@ -773,16 +1025,6 @@ export function LiquidityForm({
                 </div>
             )}
 
-            {/* 移除流動性顯示 Coming Soon */}
-            {currentStage === "liquidity" && liquidityFunction === "remove-liquidity" && (
-                <div className="p-8 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-center">
-                    <div className="text-4xl mb-4">🚧</div>
-                    <h3 className="text-xl font-bold mb-2">功能開發中</h3>
-                    <p className="text-gray-600">
-                        移除流動性 (Remove Liquidity) 功能即將推出
-                    </p>
-                </div>
-            )}
         </div>
     );
 }

@@ -11,6 +11,7 @@ import { useNetworkSync } from "@/hooks/use-network-sync";
 import { useRailgunAutoScan } from "@/hooks/use-railgun-auto-scan";
 import { useShieldTransaction } from "@/hooks/use-shield-tx";
 import { useTransferTransaction } from "@/hooks/use-transfer-tx";
+import { useLiquidityTransaction } from "@/hooks/use-liquidity-tx";
 import { CrossChainHeader } from "@/components/cross-chain/header";
 import { ShieldForm } from "@/components/cross-chain/shield-form";
 import { TransferForm } from "@/components/cross-chain/transfer-form";
@@ -26,7 +27,7 @@ const DEFAULT_TOKEN_ADDRESS = ZeroAddress; // 預設使用原生代幣 (ETH)
 export default function CrossChainPage() {
   // 從 Context 取得 signer 和 address
   const { isConnected, signer, address, checkNetwork, connectWallet, switchNetwork } = useWallet();
-  const { balances, scanProgress, walletInfo } = useRailgun();
+  const { balances, scanProgress, walletInfo, refresh } = useRailgun();
 
   // State
   // const [password, setPassword] = useState(""); // Removed: Moved to Header
@@ -53,15 +54,13 @@ export default function CrossChainPage() {
     isLoading: isLoadingTransfer,
     txHash: txHashTransfer
   } = useTransferTransaction();
-
-  // For Liquidity (需要創建對應的 hook)
-  // const { executeAddLiquidity, isLoading: isLoadingLiquidity, txHash: txHashLiquidity } = useLiquidityTransaction();
+  const { executeAddLiquidity, executeRemoveLiquidity, isLoading: isLoadingLiquidity, isLoadingRemove: isLoadingLiquidityRemove, txHash: txHashLiquidity, txHashRemove: txHashLiquidityRemove } = useLiquidityTransaction();
 
   // 合併 txHash 以顯示 (簡單處理：顯示最新的那個)
-  const txHash = txHashShield || txHashTransfer; // || txHashLiquidity;
+  const txHash = txHashShield || txHashTransfer || txHashLiquidity || txHashLiquidityRemove;
   // Combine status for display
   const [scanStatus, setScanStatus] = useState("");
-  const isLoading = isLoadingShield || isLoadingTransfer; // || isLoadingLiquidity;
+  const isLoading = isLoadingShield || isLoadingTransfer || isLoadingLiquidity || isLoadingLiquidityRemove;
   const status = scanStatus; // Only scanStatus remains as a direct status string
 
   // 1. 同步網路
@@ -127,10 +126,10 @@ export default function CrossChainPage() {
   };
 
   // 執行 Add Liquidity (增加流動性)
-  const handleAddLiquidity = async () => {
-    // TODO: 實作流動性添加邏輯
-    // await executeAddLiquidity({ ... });
-    console.log("Add Liquidity - 待實作");
+  // 注意：實際的執行邏輯在 LiquidityForm 內部，這裡只是傳遞函數引用
+  const handleAddLiquidity = () => {
+    // 這個函數將由 LiquidityForm 內部調用 executeAddLiquidity
+    // 不需要在這裡實現，因為參數都在 LiquidityForm 內部
   };
 
   return (
@@ -205,7 +204,11 @@ export default function CrossChainPage() {
                 railgunAddress={railgunAddress}
                 balances={balances}
                 handleAddLiquidity={handleAddLiquidity}
-                isLoading={isLoading}
+                isLoading={isLoadingLiquidity}
+                isLoadingRemove={isLoadingLiquidityRemove}
+                executeAddLiquidity={executeAddLiquidity}
+                executeRemoveLiquidity={executeRemoveLiquidity}
+                onRefresh={refresh}
               />
             </TabsContent>
           </Tabs>

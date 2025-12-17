@@ -78,14 +78,23 @@ export const useShieldTransaction = () => {
             } else {
                 // ZetaChain -> ZetaChain (Local Shield)
                 let targetToken = tokenAddress;
-                // 注意：這裡省略了如果 tokenAddress 是 ZeroAddress 需要處理的邏輯 (如前頁面註釋所述)
+                const isNativeToken = tokenAddress === ZeroAddress;
+                
+                // 如果是 Native Token，顯示進度提示
+                if (isNativeToken) {
+                    toast.loading("🔄 檢測到 Native Token (ZETA)，準備包裝...", { id: toastId });
+                }
 
                 tx = await executeLocalShield(
                     railgunAddress,
                     targetToken,
                     amountBigInt,
                     signer,
-                    TEST_NETWORK // ZetaChain Testnet
+                    TEST_NETWORK, // ZetaChain Testnet
+                    (message: string) => {
+                        // 更新進度提示
+                        toast.loading(message, { id: toastId });
+                    }
                 );
             }
 
