@@ -91,7 +91,7 @@ export function LiquidityForm({
     // DeFi 類別選項（第一階段）
     const defiCategories = [
         {
-            value: "liquidity" as DefiCategory,
+            value: "liquidity" as const,
             label: "流動性管理 (Liquidity Management)",
             description: "添加或移除流動性",
             available: true,
