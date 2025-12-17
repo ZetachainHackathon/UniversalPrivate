@@ -3,7 +3,7 @@ import {
   setOnTXIDMerkletreeScanCallback,
   setOnBalanceUpdateCallback,
   refreshBalances,
-} from "@railgun-community/wallet";
+} from "@repo/sdk";
 import {
   delay,
   MerkletreeScanUpdateEvent,

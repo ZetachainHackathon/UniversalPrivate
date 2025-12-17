@@ -18,15 +18,18 @@ import {
   generateCrossContractCallsProof,
   populateProvedCrossContractCalls,
   TokenType,
-  startRailgunEngine,
-  stopRailgunEngine,
+  getEngine,
 } from "@railgun-community/wallet";
 import {
+  initializeEngine as sdkInitializeEngine,
+  stopEngine,
+  loadEngineProvider as sdkLoadEngineProvider,
   getGasDetailsForTransaction,
   getOriginalGasDetailsForTransaction,
   serializeERC20RelayAdaptUnshield,
   serializeERC20Transfer,
-} from "./transcation/util";
+} from "@repo/sdk";
+import { createNodeDatabase, createNodeArtifactStore } from "@repo/sdk/node";
 import { TEST_ENCRYPTION_KEY, TEST_NETWORK, ZETACHAIN_DEPLOYMENT_NETWORK, SEPOLIA_DEPLOYMENT_NETWORK } from "./constants";
 import { getProviderWallet, getSepoliaWallet } from "./wallet";
 import { Contract, ethers, type ContractTransaction } from "ethers";
@@ -34,10 +37,10 @@ import { TokenData } from "@railgun-community/engine";
 import { overrideArtifact } from "@railgun-community/wallet";
 import { getArtifact, listArtifacts } from "railgun-circuit-test-artifacts";
 import { getContractAddress, loadDeployment } from "./deployments";
-import { createNodeDatabase } from "./db";
-import { createArtifactStore } from "./artifact";
+
+
 import type { POIList } from "@railgun-community/shared-models";
-import { loadEngineProvider } from "./loadProvider";
+
 import { setupNodeGroth16 } from "./prover";
 import { setupBalanceCallbacks, runBalancePoller, waitForBalancesLoaded, displaySpendableBalances } from "./balances";
 
@@ -398,7 +401,7 @@ const initializeEngine = async (args?: {
   const db = createNodeDatabase(dbPath);
   const shouldDebug = true;
   const artifactPath = args?.artifactsPath ?? "artifacts-directory";
-  const artifactStore = createArtifactStore(artifactPath);
+  const artifactStore = createNodeArtifactStore(artifactPath);
   const useNativeArtifacts = false;
   const skipMerkletreeScans = false;
   const poiNodeURLs: string[] = args?.ppoiNodes ?? [
@@ -407,21 +410,21 @@ const initializeEngine = async (args?: {
   const customPOILists: POIList[] = [];
   const verboseScanLogging = true;
 
-  await startRailgunEngine(
+  await sdkInitializeEngine({
     walletSource,
     db,
-    shouldDebug,
     artifactStore,
+    shouldDebug,
     useNativeArtifacts,
     skipMerkletreeScans,
     poiNodeURLs,
     customPOILists,
     verboseScanLogging
-  );
+  });
 
   process.on("SIGINT", async (sigint) => {
     console.log("EXIT DETECTED", sigint);
-    await stopRailgunEngine();
+    await stopEngine();
     process.exit(0);
   });
 };
@@ -445,7 +448,11 @@ const main = async () => {
     console.log("  - RelayAdapt:", NETWORK_CONFIG[TEST_NETWORK].relayAdaptContract);
 
     // Load Network
-    await loadEngineProvider();
+    await sdkLoadEngineProvider({
+      name: TEST_NETWORK,
+      rpcUrl: TEST_RPC_URL,
+      chainId: NETWORK_CONFIG[TEST_NETWORK].chain.id,
+    });
     console.log("Network loaded");
     await setupNodeGroth16();
     console.log("Groth16 setup");

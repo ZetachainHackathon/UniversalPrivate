@@ -3,7 +3,7 @@ import {
   getShieldSignature,
   generateERC20ShieldRequests,
   serializeERC20Transfer,
-} from "./transcation/util";
+} from "@repo/sdk";
 import {
   type ShieldRequestStruct,
   ByteUtils

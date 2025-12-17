@@ -1,18 +1,16 @@
 // main.ts
 import {
-  startRailgunEngine,
-  stopRailgunEngine,
+  initializeEngine as sdkInitializeEngine,
+  stopEngine,
+  loadEngineProvider as sdkLoadEngineProvider,
   getEngine,
   createRailgunWallet,
-  setOnUTXOMerkletreeScanCallback,
-  setOnTXIDMerkletreeScanCallback,
-} from "@railgun-community/wallet";
-import { createNodeDatabase } from "./db";
-import { createArtifactStore } from "./artifact";
+} from "@repo/sdk";
+import { createNodeDatabase, createNodeArtifactStore } from "@repo/sdk/node";
 import type { POIList, RailgunBalancesEvent } from "@railgun-community/shared-models";
 import { ChainType, NETWORK_CONFIG } from "@railgun-community/shared-models";
-import { loadEngineProvider } from "./loadProvider";
-import { TEST_ENCRYPTION_KEY, TEST_TOKEN ,TEST_NETWORK, ZETACHAIN_DEPLOYMENT_NETWORK } from "./constants";
+// import { loadEngineProvider } from "./loadProvider"; // Replaced by SDK
+import { TEST_ENCRYPTION_KEY, TEST_TOKEN ,TEST_NETWORK, ZETACHAIN_DEPLOYMENT_NETWORK, TEST_RPC_URL } from "./constants";
 import { getProviderWallet } from "./wallet";
 import { displaySpendableBalances, runBalancePoller, setupBalanceCallbacks, waitForBalancesLoaded } from "./balances";
 import { setupNodeGroth16 } from "./prover";
@@ -91,7 +89,7 @@ export const initializeEngine = async (args?: {
 
   // Persistent store for downloading large artifact files required by Engine.
   const artifactPath = args?.artifactsPath ?? "artifacts-directory";
-  const artifactStore = createArtifactStore(artifactPath);
+  const artifactStore = createNodeArtifactStore(artifactPath);
 
   // Whether to download native C++ or web-assembly artifacts.
   // True for mobile. False for nodejs and browser.
@@ -124,20 +122,21 @@ export const initializeEngine = async (args?: {
   // Set to true if you would like to view verbose logs for private balance and TXID scans
   const verboseScanLogging = true;
 
-  await startRailgunEngine(
+  await sdkInitializeEngine({
     walletSource,
     db,
-    shouldDebug,
     artifactStore,
+    shouldDebug,
     useNativeArtifacts,
     skipMerkletreeScans,
     poiNodeURLs,
     customPOILists,
     verboseScanLogging
-  );
+  });
+  
   process.on("SIGINT", async (sigint) => {
     console.log("EXIT DETECTED", sigint);
-    await stopRailgunEngine();
+    await stopEngine();
     process.exit(0);
   });
 };
@@ -158,7 +157,11 @@ const main = async () => {
     console.log("  - RelayAdapt:", NETWORK_CONFIG[TEST_NETWORK].relayAdaptContract);
 
     // Load Network
-    await loadEngineProvider();
+    await sdkLoadEngineProvider({
+      name: TEST_NETWORK,
+      rpcUrl: TEST_RPC_URL,
+      chainId: NETWORK_CONFIG[TEST_NETWORK].chain.id,
+    });
     console.log("Network loaded");
     await setupNodeGroth16();
     console.log("Groth16 setup");

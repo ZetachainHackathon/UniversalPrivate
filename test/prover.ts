@@ -1,4 +1,4 @@
-import { getProver, SnarkJSGroth16 } from "@railgun-community/wallet";
+import { getProver, SnarkJSGroth16 } from "@repo/sdk";
 import { groth16 } from "snarkjs";
 
 /**
