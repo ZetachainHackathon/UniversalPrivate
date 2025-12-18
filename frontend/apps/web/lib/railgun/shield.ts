@@ -16,7 +16,7 @@ import {
     erc20PopulateShieldTransaction as sdkErc20PopulateShieldTransaction,
     erc20ShieldGasEstimate as sdkErc20ShieldGasEstimate,
     serializeERC20Transfer
-} from "@st99005912/universal-private-sdk";
+} from "@repo/sdk";
 
 import { TEST_NETWORK, TEST_TOKEN } from "@/constants";
 import { getProviderWallet } from "@/lib/utils";

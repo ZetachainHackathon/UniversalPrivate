@@ -1,5 +1,5 @@
 import { JsonRpcSigner, Wallet, ZeroAddress } from "ethers";
-import { executeCrossChainShield as sdkExecuteCrossChainShield } from "@st99005912/universal-private-sdk";
+import { executeCrossChainShield as sdkExecuteCrossChainShield } from "@repo/sdk";
 import { CONFIG } from "@/config/env";
 import { TEST_NETWORK } from "@/constants";
 

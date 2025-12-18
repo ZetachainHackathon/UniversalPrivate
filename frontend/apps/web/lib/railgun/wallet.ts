@@ -3,8 +3,8 @@ import {
   loadEngineProvider as sdkLoadEngineProvider,
   stopEngine as sdkStopEngine,
   RailgunEngineConfig
-} from '@st99005912/universal-private-sdk';
-import { createWebDatabase, createWebArtifactStore } from '@st99005912/universal-private-sdk/web';
+} from '@repo/sdk';
+import { createWebDatabase, createWebArtifactStore } from '@repo/sdk/web';
 import { CONFIG } from '@/config/env';
 import { POIList } from '@railgun-community/shared-models';
 

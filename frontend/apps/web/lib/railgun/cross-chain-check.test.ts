@@ -3,11 +3,11 @@ import { executeCrossChainTransferFromEvm } from './cross-chain-transfer';
 import { CONFIG } from '@/config/env';
 
 // Mock SDK
-vi.mock('@st99005912/universal-private-sdk', () => ({
+vi.mock('@repo/sdk', () => ({
     executeCrossChainTransferFromEvm: vi.fn().mockResolvedValue({ hash: '0xhash' }),
 }));
 
-import { executeCrossChainTransferFromEvm as mockSdkExecute } from '@st99005912/universal-private-sdk';
+import { executeCrossChainTransferFromEvm as mockSdkExecute } from '@repo/sdk';
 
 vi.mock('./encryption', () => ({
     getEncryptionKeyFromPassword: vi.fn().mockResolvedValue('mockKey'),

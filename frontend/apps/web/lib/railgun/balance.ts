@@ -1,8 +1,8 @@
 import {
   refreshBalances,
   setupBalanceListeners as sdkSetupBalanceListeners,
-} from "@st99005912/universal-private-sdk";
-import { clearWebDatabase } from "@st99005912/universal-private-sdk/web";
+} from "@repo/sdk";
+import { clearWebDatabase } from "@repo/sdk/web";
 import {
   NETWORK_CONFIG,
   RailgunBalancesEvent,

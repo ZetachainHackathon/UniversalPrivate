@@ -1,5 +1,5 @@
 // apps/web/lib/railgun/logger.ts
-import { setLoggers } from "@st99005912/universal-private-sdk";
+import { setLoggers } from "@repo/sdk";
 
 /**
  * 設定 Railgun 引擎的日誌記錄器

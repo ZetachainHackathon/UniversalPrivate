@@ -1,5 +1,5 @@
 {
-  "name": "@st99005912/universal-private-sdk",
+  "name": "@repo/sdk",
   "version": "0.0.1",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
