@@ -1,149 +1,82 @@
-import { groth16 } from 'snarkjs';
 import {
-  startRailgunEngine,
-  stopRailgunEngine,
-  getProver,
-  SnarkJSGroth16,
-  loadProvider
-} from '@railgun-community/wallet';
-import { createWebDatabase, clearWebDatabase } from './db';
-import { createWebArtifactStore } from './artifact-store';
-import {
-  FallbackProviderJsonConfig,
-  NETWORK_CONFIG,
-  POIList,
-  NetworkName
-} from '@railgun-community/shared-models';
+  initializeEngine as sdkInitializeEngine,
+  loadEngineProvider as sdkLoadEngineProvider,
+  stopEngine as sdkStopEngine,
+  RailgunEngineConfig
+} from '@repo/sdk';
+import { createWebDatabase, createWebArtifactStore } from '@repo/sdk/web';
 import { CONFIG } from '@/config/env';
-import { setEngineLoggers } from './logger';
-
-// Engine State Tracking
-let engineState: "IDLE" | "INITIALIZING" | "INITIALIZED" = "IDLE";
-let initializationPromise: Promise<void> | null = null;
+import { POIList } from '@railgun-community/shared-models';
 
 /**
  * 初始化 Railgun 引擎 (Web 版本)
- * 多次呼叫時會回傳相同的 Promise (Idempotent)
+ * 使用 SDK 進行初始化
  * @returns Promise<void> - resolves on success, rejects on failure
  */
 export const initializeEngine = async (): Promise<void> => {
-  // 1. 如果已經初始化完成，直接回傳
-  if (engineState === "INITIALIZED") {
-    console.log("✅ [Railgun] Engine 已經初始化過了，跳過。");
-    return;
-  }
+  const walletSource = "Universal";
+  const db = createWebDatabase('railgun-web-db');
+  const shouldDebug = true;
+  const artifactStore = createWebArtifactStore();
+  const useNativeArtifacts = false;
+  const skipMerkletreeScans = false;
+  const poiNodeURLs: string[] = [
+    "https://ppoi-agg.horsewithsixlegs.xyz",
+  ];
+  const customPOILists: POIList[] = [];
+  const verboseScanLogging = process.env.NODE_ENV === 'development';
 
-  // 2. 如果正在初始化，回傳即使的 Promise
-  if (engineState === "INITIALIZING" && initializationPromise) {
-    console.log("⏳ [Railgun] Engine 正在初始化中，等待完成...");
-    return initializationPromise;
-  }
-
-  // 3. 開始初始化
-  engineState = "INITIALIZING";
-
-  initializationPromise = (async () => {
-    try {
-      console.log("🚀 [Railgun] 正在初始化 Web Engine...");
-
-      setEngineLoggers();
-
-      // 0. 強制清除舊的資料庫 (已移除，確保持久化)
-      // await clearWebDatabase('railgun-web-db');
-
-      // 1. 設定
-      const walletSource = "Universal";
-      const db = createWebDatabase('railgun-web-db');
-      const shouldDebug = true;
-      const artifactStore = createWebArtifactStore();
-      const useNativeArtifacts = false;
-      const skipMerkletreeScans = false;
-      const poiNodeURLs: string[] = [
-        "https://ppoi-agg.horsewithsixlegs.xyz",
-      ];
-      const customPOILists: POIList[] = [];
-      const verboseScanLogging = true;
-
-      // 2. 啟動引擎
-      await startRailgunEngine(
-        walletSource,
-        db,
-        shouldDebug,
-        artifactStore,
-        useNativeArtifacts,
-        skipMerkletreeScans,
-        poiNodeURLs,
-        customPOILists,
-        verboseScanLogging
-      );
-
-      getProver().setSnarkJSGroth16(groth16 as unknown as SnarkJSGroth16);
-
-      console.log("✅ [Railgun] Engine 初始化成功！");
-      engineState = "INITIALIZED";
-    } catch (error) {
-      console.error("❌ [Railgun] Engine 初始化失敗:", error);
-      engineState = "IDLE"; // 失敗後允許重試
-      initializationPromise = null;
-      throw error;
-    }
-  })();
-
-  return initializationPromise;
-};
-
-/**
- * 輔助函式：格式化 Provider 資訊
- */
-const getProviderInfo = (providerUrl: string) => {
-  return {
-    provider: providerUrl,
-    priority: 3,
-    weight: 2,
-    maxLogsPerBatch: 1,
-    // disablePolling: true, // 如果 RPC 有限制，可以考慮打開
+  const config: RailgunEngineConfig = {
+    walletSource,
+    db,
+    artifactStore,
+    shouldDebug,
+    useNativeArtifacts,
+    skipMerkletreeScans,
+    poiNodeURLs,
+    customPOILists,
+    verboseScanLogging
   };
+
+  console.log("🚀 [Railgun] 正在初始化 Web Engine (via SDK)...");
+  try {
+    await sdkInitializeEngine(config);
+    console.log("✅ [Railgun] Engine 初始化成功！");
+  } catch (error) {
+    console.error("❌ [Railgun] Engine 初始化失敗:", error);
+    throw error;
+  }
 };
 
 /**
  * 載入網路 Provider
  */
 export const loadEngineProvider = async (): Promise<void> => {
+  const { NAME, RPC_URL, CHAIN_ID } = CONFIG.RAILGUN_NETWORK;
+  console.log(`🚀 [Railgun] 正在連接網路: ${NAME}`);
+
+  // 檢查 RPC 是否可用
   try {
-    const { NAME, RPC_URL, CHAIN_ID } = CONFIG.RAILGUN_NETWORK;
-    console.log(`🚀 [Railgun] 正在連接網路: ${NAME}`);
-
-    // 1. 建構設定檔
-    const providerConfig: FallbackProviderJsonConfig = {
-      chainId: CHAIN_ID,
-      providers: [
-        getProviderInfo(RPC_URL)
-      ],
-    };
-
-    // 2. 檢查 RPC 是否可用
-    try {
-      const response = await fetch(RPC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_chainId', params: [], id: 1 })
-      });
-      if (!response.ok) {
-        throw new Error(`RPC URL 回應非 200: ${response.status}`);
-      }
-    } catch (err) {
-      console.warn(`⚠️ RPC 連線測試失敗 (可能是 CORS，嘗試繼續):`, err);
+    const response = await fetch(RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_chainId', params: [], id: 1 })
+    });
+    if (!response.ok) {
+      throw new Error(`RPC URL 回應非 200: ${response.status}`);
     }
+  } catch (err) {
+    console.warn(`⚠️ RPC 連線測試失敗 (可能是 CORS，嘗試繼續):`, err);
+  }
 
-    // 3. 載入
-    await loadProvider(
-      providerConfig,
-      NAME as NetworkName,
-      1000 * 60 // Polling interval
-    );
-
+  try {
+    await sdkLoadEngineProvider({
+      name: NAME,
+      rpcUrl: RPC_URL,
+      chainId: CHAIN_ID
+    });
     console.log("✅ [Railgun] 網路連接成功！");
-  } catch (error: any) {
+  } catch (error) {
     console.error("❌ [Railgun] 網路連接失敗:", error);
     throw error;
   }
@@ -154,8 +87,6 @@ export const loadEngineProvider = async (): Promise<void> => {
  */
 export const stopEngine = async (): Promise<void> => {
   console.log("🛑 正在停止 Railgun Engine...");
-  await stopRailgunEngine();
-  engineState = "IDLE";
-  initializationPromise = null;
+  await sdkStopEngine();
   console.log("✅ Engine 已停止");
 };
