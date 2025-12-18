@@ -1,25 +1,13 @@
 {
   "name": "@repo/sdk",
   "version": "0.0.1",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./web": {
-      "types": "./dist/adapters/web/index.d.ts",
-      "import": "./dist/adapters/web/index.mjs",
-      "require": "./dist/adapters/web/index.js"
-    },
-    "./node": {
-      "types": "./dist/adapters/node/index.d.ts",
-      "import": "./dist/adapters/node/index.mjs",
-      "require": "./dist/adapters/node/index.js"
-    }
+    ".": "./src/index.ts",
+    "./web": "./src/adapters/web/index.ts",
+    "./node": "./src/adapters/node/index.ts"
   },
   "files": [
     "dist"
