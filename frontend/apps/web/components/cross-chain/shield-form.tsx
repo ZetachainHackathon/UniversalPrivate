@@ -189,28 +189,6 @@ export function ShieldForm({
                                     </span>
                                     {tokenAddress === ZeroAddress && <span className="text-xs">✓</span>}
                                 </button>
-                                
-                                {/* Test ERC20 選項 */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setTokenAddress(CONFIG.CONTRACTS.TEST_ERC20);
-                                        setShowTokenMenu(false);
-                                    }}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${
-                                        tokenAddress === CONFIG.CONTRACTS.TEST_ERC20 ? "bg-gray-200 font-bold" : ""
-                                    }`}
-                                >
-                                    {getTokenLogoUrl(CONFIG.CONTRACTS.TEST_ERC20) && (
-                                        <img 
-                                            src={getTokenLogoUrl(CONFIG.CONTRACTS.TEST_ERC20)!} 
-                                            alt="Test ERC20"
-                                            className="w-6 h-6 rounded-full"
-                                        />
-                                    )}
-                                    <span className="flex-1">Test ERC20</span>
-                                    {tokenAddress === CONFIG.CONTRACTS.TEST_ERC20 && <span className="text-xs">✓</span>}
-                                </button>
                             </div>
                         )}
                     </div>

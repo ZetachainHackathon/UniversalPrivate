@@ -38,8 +38,11 @@ export default function CrossChainPage() {
   const walletId = walletInfo?.id || "";
 
   const [adaptAddress, setAdaptAddress] = useState(DEFAULT_ADAPT_ADDRESS);
-  // tokenAddress 初始值會在 TransferForm 中根據餘額自動設置
-  const [tokenAddress, setTokenAddress] = useState(DEFAULT_TOKEN_ADDRESS);
+  
+  // Separate state for Shield and Transfer to prevent conflict
+  const [shieldTokenAddress, setShieldTokenAddress] = useState(ZeroAddress); // Shield defaults to Native Token
+  const [transferTokenAddress, setTransferTokenAddress] = useState(DEFAULT_TOKEN_ADDRESS); // Transfer can be any token
+
   const [selectedChain, setSelectedChain] = useState("sepolia");
   const [amount, setAmount] = useState("0.01");
   const [recipient, setRecipient] = useState(""); // For Transfer
@@ -66,8 +69,8 @@ export default function CrossChainPage() {
   // 1. 同步網路
   useNetworkSync(signer || undefined, selectedChain, setSelectedChain);
 
-  // 2. 獲取當前鏈餘額
-  const { balance: liveBalance } = useLiveBalance(signer || undefined, address || undefined, tokenAddress, selectedChain);
+  // 2. 獲取當前鏈餘額 (For Shield Form - L1 Balance)
+  const { balance: liveBalance } = useLiveBalance(signer || undefined, address || undefined, shieldTokenAddress, selectedChain);
 
   // 3. 自動掃描 Railgun 餘額
   useRailgunAutoScan(walletId);
@@ -107,7 +110,7 @@ export default function CrossChainPage() {
   const handleShield = async () => {
     await executeShield({
       adaptAddress,
-      tokenAddress,
+      tokenAddress: shieldTokenAddress,
       amount,
       selectedChain,
     });
@@ -121,7 +124,7 @@ export default function CrossChainPage() {
       amount,
       transferType,
       targetChain: transferType === "cross-chain" ? targetChain : undefined,
-      tokenAddress,
+      tokenAddress: transferTokenAddress,
     });
   };
 
@@ -167,8 +170,8 @@ export default function CrossChainPage() {
               <ShieldForm
                 selectedChain={selectedChain}
                 handleChainChange={handleChainChange}
-                tokenAddress={tokenAddress}
-                setTokenAddress={setTokenAddress}
+                tokenAddress={shieldTokenAddress}
+                setTokenAddress={setShieldTokenAddress}
                 amount={amount}
                 setAmount={setAmount}
                 liveBalance={liveBalance}
@@ -186,8 +189,8 @@ export default function CrossChainPage() {
                 setRecipient={setRecipient}
                 amount={amount}
                 setAmount={setAmount}
-                tokenAddress={tokenAddress}
-                setTokenAddress={setTokenAddress}
+                tokenAddress={transferTokenAddress}
+                setTokenAddress={setTransferTokenAddress}
                 railgunAddress={railgunAddress}
                 balances={balances}
                 handleTransfer={handleTransfer}
