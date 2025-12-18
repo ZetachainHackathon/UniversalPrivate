@@ -17,17 +17,18 @@
     "@railgun-community/engine": "^9.5.1",
     "@railgun-community/shared-models": "7.6.1",
     "@railgun-community/wallet": "10.4.0",
-    "ethers": "6.13.1",
-    "snarkjs": "0.7.5",
     "brotli-wasm": "^3.0.1",
+    "ethers": "6.13.1",
     "level-js": "6.1.0",
-    "leveldown": "^6.1.1"
+    "leveldown": "^6.1.1",
+    "snarkjs": "0.7.5"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22.15.3",
     "@types/leveldown": "^4.0.3",
+    "@types/node": "^22.15.3",
+    "@types/snarkjs": "0.7.9",
     "typescript": "5.9.2"
   }
 }

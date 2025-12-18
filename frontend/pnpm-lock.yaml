@@ -212,6 +212,9 @@ importers:
       '@types/node':
         specifier: ^22.15.3
         version: 22.19.2
+      '@types/snarkjs':
+        specifier: 0.7.9
+        version: 0.7.9
       typescript:
         specifier: 5.9.2
         version: 5.9.2
