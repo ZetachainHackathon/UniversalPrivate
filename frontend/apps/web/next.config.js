@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ['@st99005912/universal-private-sdk'],
 
   serverExternalPackages: [
     '@railgun-community/wallet',
