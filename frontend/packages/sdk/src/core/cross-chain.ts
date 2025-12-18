@@ -115,7 +115,7 @@ export const executeCrossChainShield = async (
         valueToSend = amount;
     } else {
         // ERC20 Approve Logic
-        const erc20 = new Contract(tokenAddress, ERC20_ABI, signer);
+        const erc20: any = new Contract(tokenAddress, ERC20_ABI, signer);
         const ownerAddress = await signer.getAddress();
         const currentAllowance = await erc20.allowance(ownerAddress, evmAdaptAddress);
 
@@ -149,7 +149,7 @@ export const executeCrossChainShield = async (
     );
 
     // 3. Call EVMAdapt
-    const evmAdapt = new Contract(evmAdaptAddress, EVM_ADAPT_ABI, signer);
+    const evmAdapt: any = new Contract(evmAdaptAddress, EVM_ADAPT_ABI, signer);
     const tx = await evmAdapt.shieldOnZetachain([shieldRequestStruct], { value: valueToSend });
     return tx;
 };
