@@ -1,15 +1,32 @@
 {
-  "name": "@repo/sdk",
+  "name": "@st99005912/universal-private-sdk",
   "version": "0.0.1",
-  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./web": "./src/adapters/web/index.ts",
-    "./node": "./src/adapters/node/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./web": {
+      "types": "./dist/adapters/web/index.d.ts",
+      "import": "./dist/adapters/web/index.mjs",
+      "require": "./dist/adapters/web/index.js"
+    },
+    "./node": {
+      "types": "./dist/adapters/node/index.d.ts",
+      "import": "./dist/adapters/node/index.mjs",
+      "require": "./dist/adapters/node/index.js"
+    }
   },
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit"
   },
@@ -29,6 +46,7 @@
     "@types/leveldown": "^4.0.3",
     "@types/node": "^22.15.3",
     "@types/snarkjs": "0.7.9",
+    "tsup": "^8.5.1",
     "typescript": "5.9.2"
   }
 }
