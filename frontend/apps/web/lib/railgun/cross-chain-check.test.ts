@@ -36,7 +36,8 @@ describe('Cross-Chain Transfer Logic', () => {
             expect.anything(), // zetachainAdapt
             railgunWalletId,
             'mockKey',
-            expectedAmount, // Checked!
+            amount,            // Gross Amount
+            expectedAmount,    // Net Amount (Transfer Amount)
             tokenAddress,
             expect.anything(), // targetZrc20
             recipient,

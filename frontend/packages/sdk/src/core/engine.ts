@@ -144,7 +144,7 @@ export const loadEngineProvider = async (config: NetworkConfig): Promise<void> =
         priority: 1,
         weight: 2,
         maxLogsPerBatch: 10,
-        stallTimeout: 2500,
+        stallTimeout: 10000,
       }
     ],
   };

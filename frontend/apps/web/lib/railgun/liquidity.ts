@@ -11,6 +11,9 @@ import {
     gasEstimateForUnprovenCrossContractCalls,
     generateCrossContractCallsProof,
     populateProvedCrossContractCalls,
+    serializeERC20RelayAdaptUnshield,
+    getGasDetailsForTransaction,
+    getOriginalGasDetailsForTransaction,
 } from "@repo/sdk";
 import {
     RailgunERC20Amount,
@@ -22,11 +25,7 @@ import {
     NetworkName,
 } from "@railgun-community/shared-models";
 import { getEncryptionKeyFromPassword } from "./encryption";
-import {
-    serializeERC20RelayAdaptUnshield,
-    getGasDetailsForTransaction,
-    getOriginalGasDetailsForTransaction,
-} from "./transaction-utils";
+
 import { getPairAddress } from "./uniswap-pools";
 import { TEST_NETWORK } from "@/constants";
 import { CONFIG } from "@/config/env";

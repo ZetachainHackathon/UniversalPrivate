@@ -2,7 +2,7 @@ import {
     executeCrossChainTransfer as sdkExecuteCrossChainTransfer,
     executeCrossChainTransferFromEvm as sdkExecuteCrossChainTransferFromEvm
 } from "@repo/sdk";
-import { JsonRpcSigner, Wallet, parseUnits } from "ethers";
+import { JsonRpcSigner, Wallet, parseUnits, ZeroAddress } from "ethers";
 import { TEST_NETWORK } from "@/constants";
 import { getEncryptionKeyFromPassword } from "./encryption";
 import { CONFIG } from "@/config/env";
@@ -48,19 +48,26 @@ export const executeCrossChainTransferOnZetaChain = async (
     const amountBigInt = parseUnits(amount, decimals);
     const encryptionKey = await getEncryptionKeyFromPassword(password);
 
-    // Calculate amount after fee (logic was in generateUnshieldOutsideChainData)
-    const unshieldFeeBasisPoints = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
-    const amountAfterFee = (amountBigInt * (10000n - unshieldFeeBasisPoints)) / 10000n;
+    // Map token address to WZETA if native
+    let tokenAddressOnZetachain = tokenAddress;
+    if (tokenAddress === ZeroAddress) {
+        tokenAddressOnZetachain = CONFIG.TOKENS.WZETA.address;
+    }
 
     const targetZrc20Address = getTargetZRC20(targetChain);
+
+    // Calculate amount after fee
+    const unshieldFeeBasisPoints = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
+    const amountAfterFee = (amountBigInt * (10000n - unshieldFeeBasisPoints)) / 10000n;
 
     return sdkExecuteCrossChainTransfer(
         TEST_NETWORK,
         ZETACHAIN_ADAPT,
         railgunWalletId,
         encryptionKey,
+        amountBigInt,
         amountAfterFee,
-        tokenAddress,
+        tokenAddressOnZetachain,
         targetZrc20Address,
         recipientAddress,
         signer
@@ -92,6 +99,16 @@ export const executeCrossChainTransferFromEvm = async (
         throw new Error(`EVMAdapt address not configured for ${sourceChain}`);
     }
 
+    // Map token address to ZRC20 address on Zetachain
+    let tokenAddressOnZetachain = tokenAddress;
+    if (tokenAddress === ZeroAddress) {
+        if ("ZRC20_GAS" in chainConfig && chainConfig.ZRC20_GAS) {
+            tokenAddressOnZetachain = chainConfig.ZRC20_GAS;
+        } else {
+             throw new Error(`ZRC20_GAS not configured for ${sourceChain}`);
+        }
+    }
+
     // Calculate amount after fee
     const unshieldFeeBasisPoints = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
     const amountAfterFee = (amount * (10000n - unshieldFeeBasisPoints)) / 10000n;
@@ -103,8 +120,9 @@ export const executeCrossChainTransferFromEvm = async (
         ZETACHAIN_ADAPT,
         railgunWalletId,
         encryptionKey,
+        amount,
         amountAfterFee,
-        tokenAddress,
+        tokenAddressOnZetachain,
         targetZrc20Address,
         recipientAddress,
         signer,

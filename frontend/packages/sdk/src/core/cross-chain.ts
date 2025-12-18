@@ -169,6 +169,7 @@ export const generateCrossChainTransferTransaction = async (
     walletId: string,
     encryptionKey: string,
     amount: bigint,
+    transferAmount: bigint,
     tokenAddress: string, // The token to unshield (ZRC20 on Zetachain)
     targetZrc20Address: string, // The gas token on Zetachain for the target chain
     receiverAddress: string, // The receiver address on the target chain (0x...)
@@ -197,7 +198,7 @@ export const generateCrossChainTransferTransaction = async (
 
     const callData = zetachainAdapt.interface.encodeFunctionData("withdraw", [
         receiverBytes,
-        amount,
+        transferAmount,
         tokenAddress,
         targetZrc20Address,
         revertOptions
@@ -207,7 +208,7 @@ export const generateCrossChainTransferTransaction = async (
     const erc20 = new Contract(tokenAddress, ERC20_ABI);
     const transferData = erc20.interface.encodeFunctionData("transfer", [
         zetachainAdaptAddress,
-        amount
+        transferAmount
     ]);
 
     const crossContractCalls: ContractTransaction[] = [
@@ -298,6 +299,7 @@ export const executeCrossChainTransfer = async (
     walletId: string,
     encryptionKey: string,
     amount: bigint,
+    transferAmount: bigint,
     tokenAddress: string, // The token to unshield (ZRC20 on Zetachain)
     targetZrc20Address: string, // The gas token on Zetachain for the target chain
     receiverAddress: string, // The receiver address on the target chain (0x...)
@@ -309,6 +311,7 @@ export const executeCrossChainTransfer = async (
         walletId,
         encryptionKey,
         amount,
+        transferAmount,
         tokenAddress,
         targetZrc20Address,
         receiverAddress,
@@ -326,6 +329,7 @@ export const executeCrossChainTransferFromEvm = async (
     walletId: string,
     encryptionKey: string,
     amount: bigint,
+    transferAmount: bigint,
     tokenAddress: string,
     targetZrc20Address: string,
     receiverAddress: string,
@@ -338,6 +342,7 @@ export const executeCrossChainTransferFromEvm = async (
         walletId,
         encryptionKey,
         amount,
+        transferAmount,
         tokenAddress,
         targetZrc20Address,
         receiverAddress,
