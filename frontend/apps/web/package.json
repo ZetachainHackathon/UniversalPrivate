@@ -16,6 +16,7 @@
     "@railgun-community/engine": "^9.5.1",
     "@railgun-community/shared-models": "7.6.1",
     "@railgun-community/wallet": "10.4.0",
+    "@repo/sdk": "workspace:^",
     "@repo/ui": "workspace:*",
     "bech32": "^2.0.0",
     "brotli-wasm": "^3.0.1",

@@ -48,6 +48,9 @@ importers:
       '@railgun-community/wallet':
         specifier: 10.4.0
         version: 10.4.0(@graphql-tools/utils@10.11.0(graphql@16.12.0))(@types/node@22.19.2)(bufferutil@4.0.9)(chai@6.2.1)(react-native@0.82.1(@babel/core@7.28.5)(@types/react@19.2.2)(bufferutil@4.0.9)(react@19.2.1)(utf-8-validate@5.0.10))(tslib@2.8.1)(utf-8-validate@5.0.10)
+      '@repo/sdk':
+        specifier: workspace:^
+        version: link:../../packages/sdk
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui

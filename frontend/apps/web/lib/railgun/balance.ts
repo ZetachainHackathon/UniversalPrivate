@@ -1,15 +1,14 @@
 import {
-  setOnUTXOMerkletreeScanCallback,
-  setOnTXIDMerkletreeScanCallback,
-  setOnBalanceUpdateCallback,
   refreshBalances,
-} from "@railgun-community/wallet";
+  setupBalanceListeners as sdkSetupBalanceListeners,
+} from "@repo/sdk";
+import { clearWebDatabase } from "@repo/sdk/web";
 import {
-  MerkletreeScanUpdateEvent,
   NETWORK_CONFIG,
   RailgunBalancesEvent,
 } from "@railgun-community/shared-models";
 import { CONFIG } from "@/config/env";
+import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
 
 /**
  * 設定餘額掃描的監聽器 (Callbacks)
@@ -20,31 +19,7 @@ export const setupBalanceListeners = (
   onScanUpdate: (progress: number) => void,
   onBalanceUpdate: (balanceEvent: RailgunBalancesEvent) => void
 ) => {
-  // 1. 監聽 UTXO 掃描進度
-  const utxoListener = (event: MerkletreeScanUpdateEvent) => {
-    onScanUpdate(event.progress);
-  };
-  setOnUTXOMerkletreeScanCallback(utxoListener);
-
-  // 2. 監聽 TXID 掃描進度
-  const txidListener = (event: MerkletreeScanUpdateEvent) => {
-    onScanUpdate(event.progress);
-  };
-  setOnTXIDMerkletreeScanCallback(txidListener);
-
-  // 3. 監聽餘額更新
-  const balanceListener = (balanceEvent: RailgunBalancesEvent) => {
-    console.log("💰 餘額更新:", balanceEvent);
-    onBalanceUpdate(balanceEvent);
-  };
-  setOnBalanceUpdateCallback(balanceListener);
-
-  // 回傳 cleanup function
-  return () => {
-    setOnUTXOMerkletreeScanCallback(() => { });
-    setOnTXIDMerkletreeScanCallback(() => { });
-    setOnBalanceUpdateCallback(() => { });
-  };
+  return sdkSetupBalanceListeners(onScanUpdate, onBalanceUpdate);
 };
 
 /**
@@ -91,19 +66,25 @@ export const triggerFullRescan = async (walletId: string) => {
  */
 export const clearRailgunStorage = async (): Promise<void> => {
   console.warn("⚠️ 正在刪除 Railgun 本地資料庫...");
+  
+  // 1. 清除 LocalStorage 中的關鍵資料
+  BrowserStorage.remove(STORAGE_KEYS.RAILGUN_WALLET_ID);
+  BrowserStorage.remove(STORAGE_KEYS.RAILGUN_HASH_STORE);
+  BrowserStorage.remove(STORAGE_KEYS.RAILGUN_SALT);
+
+  // 2. 清除 Uniswap Pools 快取
+  if (typeof window !== "undefined") {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("uniswap_pools_cache_")) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  }
+
+  // 3. 清除 IndexedDB
   const dbName = "railgun-web-db";
-
-  return new Promise((resolve, reject) => {
-    const req = window.indexedDB.deleteDatabase(dbName);
-
-    req.onsuccess = () => {
-      console.log("✅ 資料庫刪除成功！");
-      resolve();
-    };
-
-    req.onerror = () => {
-      console.error("❌ 無法刪除資料庫");
-      reject(new Error("無法刪除資料庫"));
-    };
-  });
+  return clearWebDatabase(dbName);
 };
