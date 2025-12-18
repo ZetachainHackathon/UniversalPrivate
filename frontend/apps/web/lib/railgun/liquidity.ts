@@ -14,7 +14,7 @@ import {
     serializeERC20RelayAdaptUnshield,
     getGasDetailsForTransaction,
     getOriginalGasDetailsForTransaction,
-} from "@repo/sdk";
+} from "@st99005912/universal-private-sdk";
 import {
     RailgunERC20Amount,
     calculateGasPrice,

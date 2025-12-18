@@ -1,7 +1,7 @@
 import {
     executeTransfer as sdkExecuteTransfer,
     executeTransferFromEvm as sdkExecuteTransferFromEvm
-} from "@repo/sdk";
+} from "@st99005912/universal-private-sdk";
 import { JsonRpcSigner, Wallet } from "ethers";
 import { TEST_NETWORK } from "@/constants";
 import { getEncryptionKeyFromPassword } from "./encryption";

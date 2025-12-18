@@ -1,4 +1,4 @@
-import { pbkdf2, getRandomBytes } from "@repo/sdk";
+import { pbkdf2, getRandomBytes } from "@st99005912/universal-private-sdk";
 import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
 // ------------------------------------------------------------------
 // 1. 基礎 Hash 服務 (Hash Service)

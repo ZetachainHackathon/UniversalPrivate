@@ -1,7 +1,7 @@
 import {
     executeCrossChainTransfer as sdkExecuteCrossChainTransfer,
     executeCrossChainTransferFromEvm as sdkExecuteCrossChainTransferFromEvm
-} from "@repo/sdk";
+} from "@st99005912/universal-private-sdk";
 import { JsonRpcSigner, Wallet, parseUnits, ZeroAddress } from "ethers";
 import { TEST_NETWORK } from "@/constants";
 import { getEncryptionKeyFromPassword } from "./encryption";
