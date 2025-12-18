@@ -38,7 +38,7 @@ export default function CrossChainPage() {
   const railgunAddress = walletInfo?.railgunAddress || "";
   const walletId = walletInfo?.id || "";
 
-  const [adaptAddress, setAdaptAddress] = useState(DEFAULT_ADAPT_ADDRESS);
+  const [adaptAddress, setAdaptAddress] = useState<string>(DEFAULT_ADAPT_ADDRESS);
   
   // Separate state for Shield and Transfer to prevent conflict
   const [shieldTokenAddress, setShieldTokenAddress] = useState(ZeroAddress); // Shield defaults to Native Token
@@ -54,8 +54,11 @@ export default function CrossChainPage() {
       if (chainKey === "ZETACHAIN") {
         // ZetaChain 不需要 adaptAddress，但為了保持兼容性，可以設為空或保持不變
         // 實際上在 use-shield-tx.ts 中會檢查並使用 executeLocalShield
-      } else if ("EVM_ADAPT" in chainConfig && chainConfig.EVM_ADAPT) {
-        setAdaptAddress(chainConfig.EVM_ADAPT);
+      } else if ("EVM_ADAPT" in chainConfig) {
+        const evmAdaptAddress = (chainConfig as { EVM_ADAPT?: string }).EVM_ADAPT;
+        if (evmAdaptAddress) {
+          setAdaptAddress(evmAdaptAddress);
+        }
       }
     }
   }, [selectedChain]);
