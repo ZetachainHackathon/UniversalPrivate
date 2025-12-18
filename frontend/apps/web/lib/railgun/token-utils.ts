@@ -105,4 +105,101 @@ export const getTokenLogoUrl = (tokenAddress: string): string | undefined => {
     return undefined;
 };
 
+/**
+ * 根據目標鏈獲取可用的目標代幣列表
+ * @param targetChain 目標鏈名稱（如 "sepolia", "base-sepolia"）
+ * @returns 可用代幣列表，包含地址、符號、小數位數和 Logo
+ */
+export const getAvailableTargetTokens = (targetChain: string): TokenInfo[] => {
+    // 如果 targetChain 為空或未定義，返回空陣列
+    if (!targetChain || typeof targetChain !== "string" || targetChain.trim() === "") {
+        return [];
+    }
+
+    // 將目標鏈名稱轉換為大寫並替換連字符為底線（如 "sepolia" -> "SEPOLIA", "base-sepolia" -> "BASE_SEPOLIA"）
+    const chainKey = targetChain.toUpperCase().replace(/-/g, "_") as keyof typeof CONFIG.CHAINS;
+    
+    // 如果鏈不存在，返回空陣列
+    if (!(chainKey in CONFIG.CHAINS)) {
+        return [];
+    }
+
+    // 獲取該鏈的 ZRC20_GAS 地址（作為預設代幣）
+    const chainConfig = CONFIG.CHAINS[chainKey];
+    const gasTokenAddress = "ZRC20_GAS" in chainConfig ? chainConfig.ZRC20_GAS : null;
+
+    // 從 CONFIG.TOKENS 中篩選出屬於該鏈的代幣
+    // 代幣命名規則：SYMBOL_CHAIN（如 ETH_SEPOLIA, USDC_SEPOLIA）
+    const availableTokens: TokenInfo[] = [];
+    
+    for (const [symbol, token] of Object.entries(CONFIG.TOKENS)) {
+        const symbolUpper = symbol.toUpperCase();
+        const chainKeyUpper = chainKey.toUpperCase();
+        
+        // 檢查代幣符號是否以該鏈的名稱結尾
+        const endsWithChain = symbolUpper.endsWith(`_${chainKeyUpper}`) || symbolUpper === chainKeyUpper;
+        
+        if (endsWithChain) {
+            // 特別處理：如果目標鏈是 SEPOLIA，排除所有包含 BASE_SEPOLIA 或 ARBITRUM_SEPOLIA 的代幣
+            if (chainKeyUpper === "SEPOLIA") {
+                if (symbolUpper.includes("_BASE_SEPOLIA") || symbolUpper.includes("_ARBITRUM_SEPOLIA")) {
+                    continue; // 跳過這個代幣
+                }
+            }
+            
+            // 如果目標鏈是 BASE_SEPOLIA，排除所有包含 SEPOLIA 但不是 BASE_SEPOLIA 的代幣
+            if (chainKeyUpper === "BASE_SEPOLIA") {
+                if (symbolUpper.includes("_SEPOLIA") && !symbolUpper.includes("_BASE_SEPOLIA")) {
+                    continue; // 跳過這個代幣
+                }
+            }
+            
+            // 如果目標鏈是 ARBITRUM_SEPOLIA，排除所有包含 SEPOLIA 但不是 ARBITRUM_SEPOLIA 的代幣
+            if (chainKeyUpper === "ARBITRUM_SEPOLIA") {
+                if (symbolUpper.includes("_SEPOLIA") && !symbolUpper.includes("_ARBITRUM_SEPOLIA")) {
+                    continue; // 跳過這個代幣
+                }
+            }
+            
+            availableTokens.push({
+                address: token.address,
+                symbol,
+                decimals: token.decimals || 18,
+                logoUrl: "logoUrl" in token ? token.logoUrl : undefined,
+            });
+        }
+    }
+
+    // 如果沒有找到匹配的代幣，但鏈有 ZRC20_GAS，則返回 Gas Token
+    if (availableTokens.length === 0 && gasTokenAddress) {
+        // 從 CONFIG.TOKENS 中查找對應的 Gas Token
+        for (const [symbol, token] of Object.entries(CONFIG.TOKENS)) {
+            if (token.address.toLowerCase() === gasTokenAddress.toLowerCase()) {
+                availableTokens.push({
+                    address: token.address,
+                    symbol,
+                    decimals: token.decimals || 18,
+                    logoUrl: "logoUrl" in token ? token.logoUrl : undefined,
+                });
+                break;
+            }
+        }
+    }
+
+    // 將 Gas Token 放在第一位（如果存在）
+    if (gasTokenAddress) {
+        const gasTokenIndex = availableTokens.findIndex(
+            token => token.address.toLowerCase() === gasTokenAddress.toLowerCase()
+        );
+        if (gasTokenIndex > 0) {
+            const gasToken = availableTokens.splice(gasTokenIndex, 1)[0];
+            if (gasToken) {
+                availableTokens.unshift(gasToken);
+            }
+        }
+    }
+
+    return availableTokens;
+};
+
 

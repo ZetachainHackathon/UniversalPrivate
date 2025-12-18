@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@repo/ui/components/button";
 import { CONFIG } from "@/config/env";
 import { ZeroAddress } from "ethers";
@@ -32,17 +32,36 @@ export function ShieldForm({
     const chainMenuRef = useRef<HTMLDivElement>(null);
     const tokenMenuRef = useRef<HTMLDivElement>(null);
 
-    // 可用的鏈列表
-    const availableChains = [
-        { value: "sepolia", name: "Sepolia Testnet", key: "SEPOLIA" },
-        { value: "zetachain", name: "ZetaChain Testnet", key: "ZETACHAIN" },
-    ];
+    // 可用的鏈列表（支援所有 CONFIG.CHAINS 中的鏈）
+    const availableChains = useMemo(() => {
+        return Object.entries(CONFIG.CHAINS).map(([key, config]) => {
+            const chainDisplayName = key
+                .split("_")
+                .map(word => {
+                    const lower = word.toLowerCase();
+                    if (lower === "bsc") return "BSC";
+                    if (lower === "testnet" || lower === "test") return "Testnet";
+                    if (lower === "fuji") return "Fuji";
+                    if (lower === "amoy") return "Amoy";
+                    if (lower === "zetachain") return "ZetaChain";
+                    return word.charAt(0) + word.slice(1).toLowerCase();
+                })
+                .join(" ");
+            
+            return {
+                key,
+                value: key.toLowerCase().replace(/_/g, "-"),
+                name: chainDisplayName,
+                logo: "CHAIN_LOGO" in config ? config.CHAIN_LOGO : null,
+            };
+        });
+    }, []);
 
     // 獲取當前鏈的 LOGO
     const getChainLogo = (chain: string) => {
-        const chainKey = chain === "sepolia" ? "SEPOLIA" : "ZETACHAIN";
+        const chainKey = chain.toUpperCase().replace(/-/g, "_") as keyof typeof CONFIG.CHAINS;
         if (chainKey in CONFIG.CHAINS) {
-            const chainConfig = CONFIG.CHAINS[chainKey as keyof typeof CONFIG.CHAINS];
+            const chainConfig = CONFIG.CHAINS[chainKey];
             return "CHAIN_LOGO" in chainConfig ? chainConfig.CHAIN_LOGO : null;
         }
         return null;
@@ -51,15 +70,28 @@ export function ShieldForm({
     // 獲取當前 Token 的 LOGO
     const getTokenLogo = () => {
         if (tokenAddress === ZeroAddress) {
-            // Native Token
-            if (selectedChain === "sepolia") {
-                return CONFIG.CHAINS.SEPOLIA.CHAIN_LOGO;
-            } else {
-                return CONFIG.CHAINS.ZETACHAIN.CHAIN_LOGO;
+            // Native Token - 根據選擇的鏈獲取對應的 LOGO
+            const chainKey = selectedChain.toUpperCase().replace(/-/g, "_") as keyof typeof CONFIG.CHAINS;
+            if (chainKey in CONFIG.CHAINS) {
+                const chainConfig = CONFIG.CHAINS[chainKey];
+                return "CHAIN_LOGO" in chainConfig ? chainConfig.CHAIN_LOGO : null;
             }
+            return null;
         } else {
             return getTokenLogoUrl(tokenAddress);
         }
+    };
+
+    // 獲取當前鏈的原生代幣符號
+    const getNativeTokenSymbol = () => {
+        const chainKey = selectedChain.toUpperCase().replace(/-/g, "_") as keyof typeof CONFIG.CHAINS;
+        if (chainKey === "ZETACHAIN") return "ZETA";
+        if (chainKey.includes("SEPOLIA") || chainKey.includes("BASE") || chainKey.includes("ARBITRUM")) return "ETH";
+        if (chainKey.includes("BSC")) return "BNB";
+        if (chainKey.includes("AVALANCHE") || chainKey.includes("FUJI")) return "AVAX";
+        if (chainKey.includes("POLYGON") || chainKey.includes("AMOY")) return "POL";
+        if (chainKey.includes("KAIA")) return "KAIA";
+        return "ETH"; // 預設
     };
 
     // 點擊外部關閉選單
@@ -101,19 +133,20 @@ export function ShieldForm({
                                 />
                             )}
                             <span className="flex-1 text-left">
-                                {availableChains.find(c => c.value === selectedChain)?.name || selectedChain}
+                                {availableChains.find(c => c.value === selectedChain)?.name || 
+                                 selectedChain.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
                             </span>
                             <span className="text-gray-400">▼</span>
                         </button>
                         
                         {showChainMenu && (
-                            <div className="absolute z-50 w-full mt-2 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <div className="absolute z-50 w-full mt-2 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-60 overflow-y-auto">
                                 {availableChains.map((chain) => {
-                                    const chainLogo = getChainLogo(chain.value);
+                                    const chainLogo = chain.logo || getChainLogo(chain.value);
                                     const isSelected = selectedChain === chain.value;
                                     return (
                                         <button
-                                            key={chain.value}
+                                            key={chain.key}
                                             type="button"
                                             onClick={() => {
                                                 handleChainChange(chain.value);
@@ -151,50 +184,55 @@ export function ShieldForm({
                                 <img 
                                     src={getTokenLogo()!} 
                                     alt={tokenAddress === ZeroAddress 
-                                        ? `Native Token (${selectedChain === "sepolia" ? "ETH" : "ZETA"})`
+                                        ? `Native Token (${getNativeTokenSymbol()})`
                                         : "Test ERC20"}
                                     className="w-5 h-5 rounded-full"
                                 />
                             )}
                             <span className="flex-1 text-left">
                                 {tokenAddress === ZeroAddress
-                                    ? `Native Token (${selectedChain === "sepolia" ? "ETH" : "ZETA"})`
+                                    ? `Native Token (${getNativeTokenSymbol()})`
                                     : "Test ERC20"}
+                            </span>
+                            <span className="text-xs text-gray-400 font-mono">
+                                {tokenAddress === ZeroAddress 
+                                    ? "Native Token"
+                                    : `${tokenAddress.slice(0, 6)}...${tokenAddress.slice(-4)}`}
                             </span>
                             <span className="text-gray-400">▼</span>
                         </button>
-                        
-                        {showTokenMenu && (
-                            <div className="absolute z-50 w-full mt-2 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                {/* Native Token 選項 */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setTokenAddress(ZeroAddress);
-                                        setShowTokenMenu(false);
-                                    }}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${
-                                        tokenAddress === ZeroAddress ? "bg-gray-200 font-bold" : ""
-                                    }`}
-                                >
-                                    {getChainLogo(selectedChain) && (
-                                        <img 
-                                            src={getChainLogo(selectedChain)!} 
-                                            alt={`Native Token (${selectedChain === "sepolia" ? "ETH" : "ZETA"})`}
-                                            className="w-6 h-6 rounded-full"
-                                        />
-                                    )}
-                                    <span className="flex-1">
-                                        Native Token ({selectedChain === "sepolia" ? "ETH" : "ZETA"})
-                                    </span>
-                                    {tokenAddress === ZeroAddress && <span className="text-xs">✓</span>}
-                                </button>
-                            </div>
-                        )}
+                            
+                            {showTokenMenu && (
+                                <div className="absolute z-50 w-full mt-2 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                                    {/* Native Token 選項 */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setTokenAddress(ZeroAddress);
+                                            setShowTokenMenu(false);
+                                        }}
+                                        className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${
+                                            tokenAddress === ZeroAddress ? "bg-gray-200 font-bold" : ""
+                                        }`}
+                                    >
+                                        {getTokenLogo() && (
+                                            <img 
+                                                src={getTokenLogo()!} 
+                                                alt={`Native Token (${getNativeTokenSymbol()})`}
+                                                className="w-6 h-6 rounded-full"
+                                            />
+                                        )}
+                                        <span className="flex-1">
+                                            Native Token ({getNativeTokenSymbol()})
+                                        </span>
+                                        <span className="text-xs text-gray-400 font-mono">
+                                            Native Token
+                                        </span>
+                                        {tokenAddress === ZeroAddress && <span className="text-xs">✓</span>}
+                                    </button>
+                                </div>
+                            )}
                     </div>
-                    <p className="text-xs text-gray-500 font-mono break-all">
-                        Addr: {tokenAddress}
-                    </p>
                 </div>
             </div>
 
@@ -209,18 +247,14 @@ export function ShieldForm({
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">
                         {tokenAddress === ZeroAddress
-                            ? selectedChain === "sepolia"
-                                ? "ETH"
-                                : "ZETA"
+                            ? getNativeTokenSymbol()
                             : "ERC20"}
                     </span>
                 </div>
                 <p className="text-sm text-gray-500 text-right">
                     錢包餘額: {Number(liveBalance).toFixed(4)}{" "}
                     {tokenAddress === ZeroAddress
-                        ? selectedChain === "sepolia"
-                            ? "ETH"
-                            : "ZETA"
+                        ? getNativeTokenSymbol()
                         : "ERC20"}
                 </p>
             </div>

@@ -12,24 +12,34 @@ export const useNetworkGuard = () => {
     const { checkNetwork, switchNetwork } = useWallet();
     const { confirm } = useConfirm();
 
-    const ensureNetwork = useCallback(async (requiredChainName: "sepolia" | "zetachain" | "base-sepolia"): Promise<boolean> => {
-        let requiredIdDec: bigint;
-        let requiredIdHex: string;
-        let confirmMessage: string;
-
-        if (requiredChainName === "sepolia") {
-            requiredIdDec = BigInt(CONFIG.CHAINS.SEPOLIA.ID_DEC);
-            requiredIdHex = CONFIG.CHAINS.SEPOLIA.ID_HEX;
-            confirmMessage = CONTENT.WARNINGS.SWITCH_NETWORK_SEPOLIA;
-        } else if (requiredChainName === "base-sepolia") {
-            requiredIdDec = BigInt(CONFIG.CHAINS.BASE_SEPOLIA.ID_DEC);
-            requiredIdHex = CONFIG.CHAINS.BASE_SEPOLIA.ID_HEX;
-            confirmMessage = CONTENT.WARNINGS.SWITCH_NETWORK_BASE_SEPOLIA;
-        } else {
-            requiredIdDec = BigInt(CONFIG.CHAINS.ZETACHAIN.ID_DEC);
-            requiredIdHex = CONFIG.CHAINS.ZETACHAIN.ID_HEX;
-            confirmMessage = CONTENT.WARNINGS.SWITCH_NETWORK_ZETACHAIN;
+    const ensureNetwork = useCallback(async (requiredChainName: string): Promise<boolean> => {
+        // 將鏈名稱轉換為 CONFIG.CHAINS 的 key 格式
+        const chainKey = requiredChainName.toUpperCase().replace(/-/g, "_") as keyof typeof CONFIG.CHAINS;
+        
+        if (!(chainKey in CONFIG.CHAINS)) {
+            console.error(`Unknown chain: ${requiredChainName}`);
+            return false;
         }
+
+        const chainConfig = CONFIG.CHAINS[chainKey];
+        const requiredIdDec = BigInt(chainConfig.ID_DEC);
+        const requiredIdHex = chainConfig.ID_HEX;
+        
+        // 生成確認訊息（使用鏈的顯示名稱）
+        const chainDisplayName = chainKey
+            .split("_")
+            .map(word => {
+                const lower = word.toLowerCase();
+                if (lower === "bsc") return "BSC";
+                if (lower === "testnet" || lower === "test") return "Testnet";
+                if (lower === "fuji") return "Fuji";
+                if (lower === "amoy") return "Amoy";
+                if (lower === "zetachain") return "ZetaChain";
+                return word.charAt(0) + word.slice(1).toLowerCase();
+            })
+            .join(" ");
+        
+        const confirmMessage = `請切換到 ${chainDisplayName} 網路以繼續操作。`;
 
         const isCorrect = await checkNetwork(requiredIdDec);
         if (isCorrect) return true;

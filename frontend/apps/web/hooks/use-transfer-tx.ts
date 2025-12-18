@@ -27,6 +27,7 @@ interface UseTransferTxProps {
     transferType: "internal" | "cross-chain";
     targetChain?: string;
     tokenAddress: string;
+    targetTokenAddress?: string;
     // password: string; // Removed: Logic moved to Context
 }
 
@@ -43,6 +44,7 @@ export const useTransferTransaction = () => {
         transferType,
         targetChain,
         tokenAddress,
+        targetTokenAddress,
     }: UseTransferTxProps) => {
         // 1. 基本檢查
         const railgunAddress = walletInfo?.railgunAddress;
@@ -137,6 +139,11 @@ export const useTransferTransaction = () => {
                     return;
                 }
 
+                if (!targetTokenAddress) {
+                    toast.error("請選擇目標代幣", { id: toastId });
+                    return;
+                }
+
                 // 檢查當前鏈是否支援跨鏈轉帳
                 if (!currentChainKey) {
                     toast.error(`不支援的鏈: ${currentChainId.toString()}`, { id: toastId });
@@ -166,7 +173,8 @@ export const useTransferTransaction = () => {
                     signer,
                     currentChainKey, // 使用當前連接的鏈作為來源鏈（大寫格式，如 "SEPOLIA", "BASE_SEPOLIA", "ZETACHAIN"）
                     targetChain,
-                    tokenAddress // 傳入選擇的 Token 地址
+                    tokenAddress, // 傳入選擇的 Token 地址
+                    targetTokenAddress // 傳入選擇的目標代幣地址
                 );
 
                 setTxHash(tx.hash);
