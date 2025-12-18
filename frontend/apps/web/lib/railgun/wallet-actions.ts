@@ -5,7 +5,7 @@ import {
   getWalletShareableViewingKey,
   createViewOnlyRailgunWallet,
   getWalletMnemonic
-} from "@railgun-community/wallet";
+} from "@repo/sdk";
 import {
   NETWORK_CONFIG,
   NetworkName,
@@ -15,7 +15,7 @@ import {
 // 👇 引入我們之前寫好的模組
 import { getEncryptionKeyFromPassword, setEncryptionKeyFromPassword } from "./encryption";
 import { CONFIG } from "@/config/env";
-import { createWebDatabase, clearWebDatabase } from './db';
+import { createWebDatabase, clearWebDatabase } from '@repo/sdk/web';
 import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
 
 // 👇 引入 Engine Lifecycle 控制

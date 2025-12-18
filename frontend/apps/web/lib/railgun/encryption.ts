@@ -1,4 +1,4 @@
-import { pbkdf2, getRandomBytes } from "@railgun-community/wallet";
+import { pbkdf2, getRandomBytes } from "@repo/sdk";
 import { BrowserStorage, STORAGE_KEYS } from "@/lib/storage";
 // ------------------------------------------------------------------
 // 1. 基礎 Hash 服務 (Hash Service)

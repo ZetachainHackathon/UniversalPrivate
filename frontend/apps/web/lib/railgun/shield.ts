@@ -1,19 +1,9 @@
-// apps/web/lib/railgun/shield.ts
-
 import {
-  NETWORK_CONFIG,
   NetworkName,
-  TXIDVersion,
   RailgunERC20AmountRecipient,
 } from "@railgun-community/shared-models";
 import {
-  gasEstimateForShield,
-  populateShield,
-} from "@railgun-community/wallet";
-import { 
-  Contract, 
-  BaseContract, 
-  ContractTransactionResponse,
+  Contract,
   type HDNodeWallet, 
   type Wallet, 
   type JsonRpcSigner,
@@ -21,44 +11,19 @@ import {
   ZeroAddress
 } from "ethers";
 
-// 👇 引入我們之前寫好的模組
+// Import from SDK
 import { 
-  getGasDetailsForTransaction, 
-  getShieldSignature, 
-  serializeERC20Transfer 
-} from "./transaction-utils";
+    erc20PopulateShieldTransaction as sdkErc20PopulateShieldTransaction,
+    erc20ShieldGasEstimate as sdkErc20ShieldGasEstimate,
+    serializeERC20Transfer
+} from "@repo/sdk";
+
 import { TEST_NETWORK, TEST_TOKEN } from "@/constants";
 import { getProviderWallet } from "@/lib/utils";
 import { CONFIG } from "@/config/env";
 
-/**
- * 估算 Shield 交易所需的 Gas
- */
-export const erc20ShieldGasEstimate = async (
-  network: NetworkName,
-  wallet: Wallet | HDNodeWallet | JsonRpcSigner,
-  erc20AmountRecipients: RailgunERC20AmountRecipient[]
-) => {
-  // @ts-expect-error JsonRpcSigner is compatible for signMessage
-  const shieldPrivateKey = await getShieldSignature(wallet);
-  const fromWalletAddress = await wallet.getAddress();
-
-  const { gasEstimate } = await gasEstimateForShield(
-    TXIDVersion.V2_PoseidonMerkle,
-    network,
-    shieldPrivateKey,
-    erc20AmountRecipients,
-    [], // nftAmountRecipients
-    fromWalletAddress
-  );
-
-  return gasEstimate;
-};
-
-interface IERC20 extends BaseContract {
-  allowance(owner: string, spender: string): Promise<bigint>;
-  approve(spender: string, amount: bigint): Promise<ContractTransactionResponse>;
-}
+// Re-export or wrap SDK function
+export const erc20ShieldGasEstimate = sdkErc20ShieldGasEstimate;
 
 /**
  * 準備 Shield 交易 (包含 Approve 檢查)
@@ -73,7 +38,6 @@ export const erc20PopulateShieldTransaction = async (
   sendWithPublicWallet: boolean,
   onProgress?: (message: string) => void
 ) => {
-  const spender = NETWORK_CONFIG[network].proxyContract;
   const walletAddress = await wallet.getAddress();
 
   // 1. 檢查並執行 Approve（處理 Native Token 包裝）
@@ -121,72 +85,21 @@ export const erc20PopulateShieldTransaction = async (
       // 更新 tokenAddress 為 WZETA
       amountRecipient.tokenAddress = wzetaAddress;
     }
-    
-    // 處理 ERC20 代幣（包括包裝後的 WZETA）
-    const contract = new Contract(
-      amountRecipient.tokenAddress,
-      [
-        "function allowance(address owner, address spender) view returns (uint256)",
-        "function approve(address spender, uint256 amount) external returns (bool)",
-        "function balanceOf(address account) view returns (uint256)",
-      ],
-      wallet
-    ) as unknown as IERC20 & { 
-        balanceOf: (acc: string) => Promise<bigint>; 
-    };
-
-    const balance = await contract.balanceOf(walletAddress);
-    console.log(`💰 當前餘額: ${formatUnits(balance, 18)}`);
-    console.log(`📉 欲 Shield 數量: ${formatUnits(amountRecipient.amount, 18)}`);
-
-    const allowance = await contract.allowance(walletAddress, spender);
-    
-    if (allowance < amountRecipient.amount) {
-      onProgress?.("⏳ 正在授權 (Approve) 代幣...");
-      console.log(`⏳ 正在授權 (Approve) 代幣: ${amountRecipient.tokenAddress}...`);
-      const tx = await contract.approve(spender, amountRecipient.amount);
-      await tx.wait(); 
-      onProgress?.("✅ 授權完成！準備 Shield...");
-      console.log("✅ 授權成功！");
-    } else {
-      console.log("ℹ️ 授權額度已足夠，跳過 Approve。");
-    }
   }
 
-  // 2. 估算 Shield Gas
-  const gasEstimate = await erc20ShieldGasEstimate(
-    network,
-    wallet,
-    erc20AmountRecipients
+  // 2. 呼叫 SDK 進行 Approve (如果需要) 和 Populate Shield
+  onProgress?.("⏳ 正在檢查授權並準備交易...");
+  console.log("⏳ 呼叫 SDK 進行 Shield 準備...");
+  
+  const result = await sdkErc20PopulateShieldTransaction(
+      network,
+      wallet,
+      erc20AmountRecipients,
+      sendWithPublicWallet
   );
-
-  // @ts-expect-error JsonRpcSigner is compatible
-  const shieldPrivateKey = await getShieldSignature(wallet);
-
-  const gasDetails = await getGasDetailsForTransaction(
-    network,
-    gasEstimate,
-    sendWithPublicWallet,
-    wallet
-  );
-
-  // 3. 產生 Shield 交易物件
-  onProgress?.("🔐 生成零知識證明...");
-  const { transaction, nullifiers } = await populateShield(
-    TXIDVersion.V2_PoseidonMerkle,
-    network,
-    shieldPrivateKey,
-    erc20AmountRecipients,
-    [],
-    gasDetails
-  );
-
-  return {
-    gasEstimate,
-    gasDetails,
-    transaction,
-    nullifiers,
-  };
+  
+  onProgress?.("✅ 交易準備完成！");
+  return result;
 };
 
 /**

@@ -11,7 +11,7 @@ import {
     gasEstimateForUnprovenCrossContractCalls,
     generateCrossContractCallsProof,
     populateProvedCrossContractCalls,
-} from "@railgun-community/wallet";
+} from "@repo/sdk";
 import {
     RailgunERC20Amount,
     calculateGasPrice,

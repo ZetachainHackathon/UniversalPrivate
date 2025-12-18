@@ -31,7 +31,8 @@ import {
 // ABIs
 const ERC20_ABI = [
     "function approve(address spender, uint256 amount) public returns (bool)",
-    "function allowance(address owner, address spender) public view returns (uint256)"
+    "function allowance(address owner, address spender) public view returns (uint256)",
+    "function transfer(address to, uint256 amount) returns (bool)"
 ];
 
 const EVM_ADAPT_ABI = [
@@ -74,6 +75,7 @@ const EVM_ADAPT_ABI = [
         ],
         outputs: [],
     },
+    "function unshieldOutsideChain(bytes calldata _unshieldOutsideChainData) external payable",
 ];
 
 const ZETACHAIN_ADAPT_ABI = [
@@ -158,10 +160,10 @@ import { ByteUtils } from "@railgun-community/engine";
 import { getShieldSignature } from "./utils/transaction";
 
 /**
- * Execute Cross-Chain Transfer (Withdraw)
+ * Generate Cross-Chain Transfer Transaction (Withdraw)
  * Unshields funds on Zetachain and calls ZetachainAdapt to bridge them to another chain.
  */
-export const executeCrossChainTransfer = async (
+export const generateCrossChainTransferTransaction = async (
     networkName: NetworkName,
     zetachainAdaptAddress: string,
     walletId: string,
@@ -183,9 +185,7 @@ export const executeCrossChainTransfer = async (
     const zetachainAdapt = new Contract(zetachainAdaptAddress, ZETACHAIN_ADAPT_ABI);
     
     // Encode receiver address to bytes
-    const receiverBytes = receiverAddress; // Ethers handles hex string as bytes if prefixed with 0x? 
-    // The frontend used: const receiverBytes = receiverAddress; 
-    // But `withdraw` takes `bytes`. If receiverAddress is "0x123...", it should be fine.
+    const receiverBytes = receiverAddress; 
 
     const revertOptions = {
         revertAddress: await signer.getAddress(),
@@ -203,7 +203,19 @@ export const executeCrossChainTransfer = async (
         revertOptions
     ]);
 
+    // Construct Transfer Call
+    const erc20 = new Contract(tokenAddress, ERC20_ABI);
+    const transferData = erc20.interface.encodeFunctionData("transfer", [
+        zetachainAdaptAddress,
+        amount
+    ]);
+
     const crossContractCalls: ContractTransaction[] = [
+        {
+            to: tokenAddress,
+            data: transferData,
+            value: 0n,
+        },
         {
             to: zetachainAdaptAddress,
             data: callData,
@@ -277,7 +289,63 @@ export const executeCrossChainTransfer = async (
         transactionGasDetails
     );
 
+    return transaction;
+};
+
+export const executeCrossChainTransfer = async (
+    networkName: NetworkName,
+    zetachainAdaptAddress: string,
+    walletId: string,
+    encryptionKey: string,
+    amount: bigint,
+    tokenAddress: string, // The token to unshield (ZRC20 on Zetachain)
+    targetZrc20Address: string, // The gas token on Zetachain for the target chain
+    receiverAddress: string, // The receiver address on the target chain (0x...)
+    signer: JsonRpcSigner | Wallet | HDNodeWallet
+) => {
+    const transaction = await generateCrossChainTransferTransaction(
+        networkName,
+        zetachainAdaptAddress,
+        walletId,
+        encryptionKey,
+        amount,
+        tokenAddress,
+        targetZrc20Address,
+        receiverAddress,
+        signer
+    );
+
     // 7. Send Transaction
     const tx = await signer.sendTransaction(transaction.transaction);
+    return tx;
+};
+
+export const executeCrossChainTransferFromEvm = async (
+    networkName: NetworkName,
+    zetachainAdaptAddress: string,
+    walletId: string,
+    encryptionKey: string,
+    amount: bigint,
+    tokenAddress: string,
+    targetZrc20Address: string,
+    receiverAddress: string,
+    signer: JsonRpcSigner | Wallet | HDNodeWallet,
+    evmAdaptAddress: string
+) => {
+    const transaction = await generateCrossChainTransferTransaction(
+        networkName,
+        zetachainAdaptAddress,
+        walletId,
+        encryptionKey,
+        amount,
+        tokenAddress,
+        targetZrc20Address,
+        receiverAddress,
+        signer
+    );
+    
+    const evmAdapt = new Contract(evmAdaptAddress, EVM_ADAPT_ABI, signer);
+    // @ts-ignore
+    const tx = await evmAdapt.unshieldOutsideChain(transaction.transaction.data);
     return tx;
 };

@@ -1,5 +1,5 @@
 // apps/web/lib/railgun/logger.ts
-import { setLoggers } from "@railgun-community/wallet";
+import { setLoggers } from "@repo/sdk";
 
 /**
  * 設定 Railgun 引擎的日誌記錄器

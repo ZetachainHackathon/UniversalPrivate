@@ -17,6 +17,10 @@ import {
 export {
   getEngine,
   createRailgunWallet,
+  loadWalletByID,
+  getWalletShareableViewingKey,
+  createViewOnlyRailgunWallet,
+  getWalletMnemonic,
   overrideArtifact,
   getProver,
   gasEstimateForUnprovenTransfer,
@@ -29,7 +33,13 @@ export {
   setOnTXIDMerkletreeScanCallback,
   setOnBalanceUpdateCallback,
   refreshBalances,
+  setLoggers,
   type SnarkJSGroth16,
+  ArtifactStore,
+  getShieldPrivateKeySignatureMessage,
+  NFTTokenType,
+  assertValidRailgunAddress,
+  ByteUtils,
 } from '@railgun-community/wallet';
 
 export interface RailgunEngineConfig {

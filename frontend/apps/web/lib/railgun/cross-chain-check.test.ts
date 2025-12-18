@@ -1,57 +1,48 @@
 import { describe, it, expect, vi } from 'vitest';
-import { generateUnshieldOutsideChainData } from './cross-chain-transfer';
+import { executeCrossChainTransferFromEvm } from './cross-chain-transfer';
 import { CONFIG } from '@/config/env';
 
-// Mock dependencies
-vi.mock('@railgun-community/wallet', () => ({
-    getEngine: () => ({ scanContractHistory: vi.fn() }),
-    gasEstimateForUnprovenCrossContractCalls: vi.fn().mockResolvedValue({ gasEstimate: 1000n }),
-    generateCrossContractCallsProof: vi.fn(),
-    populateProvedCrossContractCalls: vi.fn().mockResolvedValue({ transaction: { data: '0xmockeddata' } }),
+// Mock SDK
+vi.mock('@repo/sdk', () => ({
+    executeCrossChainTransferFromEvm: vi.fn().mockResolvedValue({ hash: '0xhash' }),
 }));
+
+import { executeCrossChainTransferFromEvm as mockSdkExecute } from '@repo/sdk';
 
 vi.mock('./encryption', () => ({
     getEncryptionKeyFromPassword: vi.fn().mockResolvedValue('mockKey'),
 }));
 
-vi.mock('./transaction-utils', () => ({
-    serializeERC20RelayAdaptUnshield: vi.fn((token, amount) => ({ tokenAddress: token, amount })),
-    getOriginalGasDetailsForTransaction: vi.fn(),
-    getGasDetailsForTransaction: vi.fn().mockResolvedValue({ gasEstimate: 1000n }),
-}));
-
-// Use Manual Mock
-vi.mock('ethers');
-
-// Import mocked functions to assertion
-import { mockPopulateTransaction } from '../../__mocks__/ethers';
-
 describe('Cross-Chain Transfer Logic', () => {
-    it('should generate unshield data with correct fees and calls', async () => {
+    it('should call SDK with correct fee-adjusted amount', async () => {
         const password = '123';
         const railgunWalletId = 'id';
         const amount = 1000000n; // 1000000 units
         const recipient = '0x123';
-        const signer = { provider: {} } as any; // Mock signer with provider
-        const targetChain = 'sepolia' as const;
+        const signer = { provider: {} } as any;
+        const sourceChain = 'SEPOLIA';
+        const targetChain = 'sepolia'; 
         const tokenAddress = CONFIG.TOKENS.ETH_SEPOLIA.address;
 
-        const data = await generateUnshieldOutsideChainData(password, railgunWalletId, amount, recipient, signer, targetChain, tokenAddress);
+        await executeCrossChainTransferFromEvm(railgunWalletId, recipient, amount, tokenAddress, password, signer, sourceChain, targetChain);
 
-        // Validation 1: Check Config usage
+        // Validation: Check Fee Calculation
         const feeBps = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
         // Calculation: 1000000 * (10000 - 25) / 10000 = 1000000 * 9975 / 10000 = 997500
         const expectedAmount = 997500n;
 
-        // Validation 2: Verify Call Counts (Transfer + Withdraw)
-        expect(mockPopulateTransaction).toHaveBeenCalledTimes(2);
-
-        // Validation 3: Verify Arguments for Transfer (ZRC20 -> Adapt)
-        expect(mockPopulateTransaction).toHaveBeenCalledWith(
-            CONFIG.CHAINS.ZETACHAIN.ZETACHAIN_ADAPT,
-            expectedAmount
+        expect(mockSdkExecute).toHaveBeenCalledWith(
+            expect.anything(), // network
+            expect.anything(), // zetachainAdapt
+            railgunWalletId,
+            'mockKey',
+            expectedAmount, // Checked!
+            tokenAddress,
+            expect.anything(), // targetZrc20
+            recipient,
+            signer,
+            expect.anything() // evmAdapt
         );
-
-        expect(data.data).toBe('0xmockeddata');
     });
 });
+

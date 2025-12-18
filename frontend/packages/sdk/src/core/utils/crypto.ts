@@ -1,5 +1,7 @@
 import { pbkdf2, getRandomBytes } from "@railgun-community/wallet";
 
+export { pbkdf2, getRandomBytes };
+
 export interface EncryptionKeyResult {
   encryptionKey: string;
   storageHash: string;
