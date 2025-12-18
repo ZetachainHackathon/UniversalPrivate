@@ -52,8 +52,13 @@ export const useShieldTransaction = () => {
         }
 
         // 4. 根據選擇的鏈進行檢查
-        const targetChain = selectedChain === "sepolia" ? "sepolia" : "zetachain";
-        const isNetworkCorrect = await ensureNetwork(targetChain);
+        const chainKey = selectedChain.toUpperCase().replace(/-/g, "_") as keyof typeof CONFIG.CHAINS;
+        if (!(chainKey in CONFIG.CHAINS)) {
+            toast.error(`不支援的鏈: ${selectedChain}`);
+            return;
+        }
+        
+        const isNetworkCorrect = await ensureNetwork(selectedChain);
         if (!isNetworkCorrect) return;
 
         setIsLoading(true);
@@ -62,20 +67,11 @@ export const useShieldTransaction = () => {
 
         try {
             const amountBigInt = parseUnits(amount, 18);
+            const chainConfig = CONFIG.CHAINS[chainKey];
+            const isZetachain = chainKey === "ZETACHAIN";
 
             let tx;
-            if (selectedChain === "sepolia") {
-                // Sepolia -> ZetaChain (Cross-Chain Shield)
-                // 強制使用 Native Token (ETH) 支付
-                tx = await executeCrossChainShield(
-                    railgunAddress,
-                    adaptAddress,
-                    tokenAddress,
-                    amountBigInt,
-                    signer,
-                    true
-                );
-            } else {
+            if (isZetachain) {
                 // ZetaChain -> ZetaChain (Local Shield)
                 let targetToken = tokenAddress;
                 const isNativeToken = tokenAddress === ZeroAddress;
@@ -95,6 +91,36 @@ export const useShieldTransaction = () => {
                         // 更新進度提示
                         toast.loading(message, { id: toastId });
                     }
+                );
+            } else {
+                // 其他 EVM 鏈 -> ZetaChain (Cross-Chain Shield)
+                // 檢查是否有 EVM_ADAPT
+                if (!("EVM_ADAPT" in chainConfig) || !chainConfig.EVM_ADAPT) {
+                    toast.error(`鏈 ${chainKey} 未配置 EVMAdapt 地址，無法執行入金`, { id: toastId });
+                    return;
+                }
+                
+                // 決定 Shield Request 中要使用的 ZRC20 地址
+                // 如果是 Native Token，使用當前鏈的 ZRC20_GAS 地址
+                let shieldTokenAddress: string | undefined;
+                if (tokenAddress === ZeroAddress) {
+                    if ("ZRC20_GAS" in chainConfig && chainConfig.ZRC20_GAS) {
+                        shieldTokenAddress = chainConfig.ZRC20_GAS;
+                    } else {
+                        toast.error(`鏈 ${chainKey} 未配置 ZRC20_GAS 地址，無法執行入金`, { id: toastId });
+                        return;
+                    }
+                }
+                
+                // 強制使用 Native Token 支付（對於跨鏈 Shield）
+                tx = await executeCrossChainShield(
+                    railgunAddress,
+                    adaptAddress,
+                    tokenAddress,
+                    amountBigInt,
+                    signer,
+                    true,
+                    shieldTokenAddress // 傳入正確的 ZRC20 地址
                 );
             }
 

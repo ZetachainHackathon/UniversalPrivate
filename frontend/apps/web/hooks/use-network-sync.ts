@@ -18,12 +18,15 @@ export const useNetworkSync = (
 
                     const chainId = network.chainId;
 
-                    if (chainId === BigInt(CONFIG.CHAINS.SEPOLIA.ID_DEC) && selectedChain !== "sepolia") {
-                        setSelectedChain("sepolia");
-                    } else if (chainId === BigInt(CONFIG.CHAINS.ZETACHAIN.ID_DEC) && selectedChain !== "zetachain") {
-                        setSelectedChain("zetachain");
-                    } else if (chainId === BigInt(CONFIG.CHAINS.BASE_SEPOLIA.ID_DEC) && selectedChain !== "base-sepolia") {
-                        setSelectedChain("base-sepolia");
+                    // 查找對應的鏈配置
+                    for (const [key, config] of Object.entries(CONFIG.CHAINS)) {
+                        if (BigInt(config.ID_DEC) === chainId) {
+                            const chainValue = key.toLowerCase().replace(/_/g, "-");
+                            if (selectedChain !== chainValue) {
+                                setSelectedChain(chainValue);
+                            }
+                            break;
+                        }
                     }
                 } catch (e: any) {
                     if (e.code !== 'NETWORK_ERROR') {

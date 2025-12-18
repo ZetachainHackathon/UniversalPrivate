@@ -4,9 +4,9 @@ import {
 } from "@repo/sdk";
 import { JsonRpcSigner, Wallet, parseUnits, ZeroAddress } from "ethers";
 import { TEST_NETWORK } from "@/constants";
-import { getEncryptionKeyFromPassword } from "./encryption";
 import { CONFIG } from "@/config/env";
 import { getTokenDecimals } from "./token-utils";
+import { getEncryptionKeyFromPassword } from "./encryption";
 
 // Contract Addresses
 const ZETACHAIN_ADAPT = CONFIG.CHAINS.ZETACHAIN.ZETACHAIN_ADAPT;
@@ -33,19 +33,22 @@ const getTargetZRC20 = (targetChain: string): string => {
 };
 
 export const executeCrossChainTransferOnZetaChain = async (
-    password: string,
+    password: string, // 注意：這裡實際上是密碼，需要轉換為加密密鑰
     railgunWalletId: string,
     amount: string,
     recipientAddress: string,
     signer: JsonRpcSigner | Wallet,
     targetChain: string,
-    tokenAddress: string
+    tokenAddress: string,
+    targetTokenAddress?: string
 ) => {
     if (!signer.provider) {
         throw new Error("無法獲取 Provider");
     }
     const decimals = await getTokenDecimals(tokenAddress, signer.provider);
     const amountBigInt = parseUnits(amount, decimals);
+    
+    // 將密碼轉換為加密密鑰
     const encryptionKey = await getEncryptionKeyFromPassword(password);
 
     // Map token address to WZETA if native
@@ -54,7 +57,10 @@ export const executeCrossChainTransferOnZetaChain = async (
         tokenAddressOnZetachain = CONFIG.TOKENS.WZETA.address;
     }
 
-    const targetZrc20Address = getTargetZRC20(targetChain);
+    // Use targetTokenAddress if provided, otherwise fall back to ZRC20_GAS
+    const targetZrc20Address = (targetTokenAddress && targetTokenAddress !== "" && targetTokenAddress !== ZeroAddress)
+        ? targetTokenAddress
+        : getTargetZRC20(targetChain);
 
     // Calculate amount after fee
     const unshieldFeeBasisPoints = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
@@ -79,11 +85,13 @@ export const executeCrossChainTransferFromEvm = async (
     recipientAddress: string,
     amount: bigint,
     tokenAddress: string,
-    password: string,
+    password: string, // 注意：這裡實際上是密碼，需要轉換為加密密鑰
     signer: JsonRpcSigner | Wallet,
     sourceChain: string,
-    targetChain: string
+    targetChain: string,
+    targetTokenAddress?: string
 ) => {
+    // 將密碼轉換為加密密鑰
     const encryptionKey = await getEncryptionKeyFromPassword(password);
     
     type ChainKey = keyof typeof CONFIG.CHAINS;
@@ -113,7 +121,10 @@ export const executeCrossChainTransferFromEvm = async (
     const unshieldFeeBasisPoints = CONFIG.FEES.UNSHIELD_BASIS_POINTS;
     const amountAfterFee = (amount * (10000n - unshieldFeeBasisPoints)) / 10000n;
 
-    const targetZrc20Address = getTargetZRC20(targetChain);
+    // Use targetTokenAddress if provided, otherwise fall back to ZRC20_GAS
+    const targetZrc20Address = (targetTokenAddress && targetTokenAddress !== "" && targetTokenAddress !== ZeroAddress)
+        ? targetTokenAddress
+        : getTargetZRC20(targetChain);
 
     return sdkExecuteCrossChainTransferFromEvm(
         TEST_NETWORK,
@@ -132,16 +143,18 @@ export const executeCrossChainTransferFromEvm = async (
 
 /**
  * 根據當前連接的鏈執行跨鏈轉帳
+ * @param password 密碼（將被轉換為加密密鑰）
  */
 export const executeCrossChainTransfer = async (
-    password: string,
+    password: string, // 注意：這裡實際上是密碼，需要轉換為加密密鑰
     railgunWalletId: string,
     amount: string,
     recipientAddress: string,
     signer: JsonRpcSigner | Wallet,
     sourceChain: string,
     targetChain: string,
-    tokenAddress: string
+    tokenAddress: string,
+    targetTokenAddress?: string
 ) => {
     const sourceChainUpper = sourceChain.toUpperCase();
     const isZetachain = sourceChainUpper === "ZETACHAIN" || sourceChainUpper === "ZETACHAIN_TESTNET";
@@ -154,7 +167,8 @@ export const executeCrossChainTransfer = async (
             recipientAddress,
             signer,
             targetChain,
-            tokenAddress
+            tokenAddress,
+            targetTokenAddress
         );
     } else {
         if (!signer.provider) {
@@ -171,7 +185,8 @@ export const executeCrossChainTransfer = async (
             password,
             signer,
             chainKey,
-            targetChain
+            targetChain,
+            targetTokenAddress
         );
     }
 };
