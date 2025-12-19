@@ -74,16 +74,18 @@ export default function CrossChainPage() {
 
 
   // Hooks (Phase 2 Smart Hooks + Phase 3 Toast)
-  const { executeShield, isLoading: isLoadingShield, txHash: txHashShield } = useShieldTransaction();
+  const { executeShield, isLoading: isLoadingShield, txHash: txHashShield, txChain: txChainShield } = useShieldTransaction();
   const {
     executeTransfer,
     isLoading: isLoadingTransfer,
-    txHash: txHashTransfer
+    txHash: txHashTransfer,
+    txChain: txChainTransfer
   } = useTransferTransaction();
-  const { executeAddLiquidity, executeRemoveLiquidity, isLoading: isLoadingLiquidity, isLoadingRemove: isLoadingLiquidityRemove, txHash: txHashLiquidity, txHashRemove: txHashLiquidityRemove } = useLiquidityTransaction();
+  const { executeAddLiquidity, executeRemoveLiquidity, isLoading: isLoadingLiquidity, isLoadingRemove: isLoadingLiquidityRemove, txHash: txHashLiquidity, txHashRemove: txHashLiquidityRemove, txChain: txChainLiquidity, txChainRemove: txChainLiquidityRemove } = useLiquidityTransaction();
 
-  // 合併 txHash 以顯示 (簡單處理：顯示最新的那個)
+  // 合併 txHash 和 txChain 以顯示 (簡單處理：顯示最新的那個)
   const txHash = txHashShield || txHashTransfer || txHashLiquidity || txHashLiquidityRemove;
+  const txChain = txChainShield || txChainTransfer || txChainLiquidity || txChainLiquidityRemove;
   // Combine status for display
   const [scanStatus, setScanStatus] = useState("");
   const isLoading = isLoadingShield || isLoadingTransfer || isLoadingLiquidity || isLoadingLiquidityRemove;
@@ -277,18 +279,40 @@ export default function CrossChainPage() {
             </div>
           )} */}
 
-          {txHash && (
-            <div className="mt-4 text-center">
-              <a
-                href={`https://sepolia.etherscan.io/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline font-bold text-lg"
-              >
-                🔗 查看交易 (Etherscan)
-              </a>
-            </div>
-          )}
+          {txHash && (() => {
+            // 根據交易鏈動態生成 explorer URL
+            const getExplorerUrl = (chainKey: string): string => {
+              const chainConfig = CONFIG.CHAINS[chainKey as keyof typeof CONFIG.CHAINS];
+              if (chainConfig && "EXPLORER_URL" in chainConfig) {
+                return chainConfig.EXPLORER_URL;
+              }
+              // 預設使用 Sepolia（向後兼容）
+              return "https://sepolia.etherscan.io";
+            };
+
+            const explorerUrl = txChain ? getExplorerUrl(txChain) : "https://sepolia.etherscan.io";
+            const explorerName = txChain === "ZETACHAIN" ? "ZetaScan" : 
+                                 txChain?.includes("BASE") ? "BaseScan" :
+                                 txChain?.includes("ARBITRUM") ? "Arbiscan" :
+                                 txChain?.includes("BSC") ? "BscScan" :
+                                 txChain?.includes("POLYGON") ? "PolygonScan" :
+                                 txChain?.includes("AVALANCHE") ? "Snowtrace" :
+                                 txChain?.includes("KAIA") ? "KlaytnScope" :
+                                 "Etherscan";
+
+            return (
+              <div className="mt-4 text-center">
+                <a
+                  href={`${explorerUrl}/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline font-bold text-lg"
+                >
+                  🔗 查看交易 ({explorerName})
+                </a>
+              </div>
+            );
+          })()}
 
         </div>
       </main>

@@ -22,6 +22,7 @@ interface UseShieldTxProps {
 export const useShieldTransaction = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [txHash, setTxHash] = useState("");
+    const [txChain, setTxChain] = useState<string>("");
 
     const { signer, isConnected, connectWallet } = useWallet();
     const { walletInfo } = useRailgun();
@@ -128,6 +129,7 @@ export const useShieldTransaction = () => {
             await tx.wait();
 
             setTxHash(tx.hash);
+            setTxChain(chainKey); // 記錄交易發送的鏈
             toast.success(CONTENT.TOASTS.SHIELD_SUCCESS, { id: toastId });
 
             // 交易成功後，延遲 5 秒觸發一次掃描
@@ -149,6 +151,7 @@ export const useShieldTransaction = () => {
     return {
         executeShield,
         isLoading,
-        txHash
+        txHash,
+        txChain
     };
 };

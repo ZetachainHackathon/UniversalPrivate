@@ -34,6 +34,7 @@ interface UseTransferTxProps {
 export const useTransferTransaction = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [txHash, setTxHash] = useState("");
+    const [txChain, setTxChain] = useState<string>("");
 
     const { signer, isConnected, connectWallet, getCurrentChainId } = useWallet();
     const { walletInfo, encryptionKey } = useRailgun();
@@ -132,6 +133,7 @@ export const useTransferTransaction = () => {
 
                 toast.loading(CONTENT.TOASTS.TX_SUBMITTED, { id: toastId });
                 setTxHash(txResponse.hash);
+                setTxChain(currentChainKey || ""); // 記錄交易發送的鏈
             } else {
                 // Cross-Chain Transfer (0zk -> EVM)
                 if (!targetChain) {
@@ -178,6 +180,7 @@ export const useTransferTransaction = () => {
                 );
 
                 setTxHash(tx.hash);
+                setTxChain(currentChainKey || ""); // 記錄交易發送的鏈
             }
             toast.success(CONTENT.TOASTS.TX_SUBMITTED, { id: toastId });
         } catch (error: any) {
@@ -191,6 +194,7 @@ export const useTransferTransaction = () => {
     return {
         executeTransfer,
         isLoading,
-        txHash
+        txHash,
+        txChain
     };
 };

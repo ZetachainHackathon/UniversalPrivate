@@ -50,7 +50,7 @@ export function CrossChainHeader() {
         // 根據鏈名稱返回對應的代幣符號和鏈名稱
         if (chainKey.includes("SEPOLIA")) return { symbol: "ETH", chainName: "Sepolia" };
         if (chainKey.includes("BASE")) return { symbol: "ETH", chainName: "Base" };
-        if (chainKey.includes("ZETACHAIN")) return { symbol: "WZETA", chainName: null };
+        if (chainKey.includes("ZETACHAIN")) return { symbol: "ZETA", chainName: "ZetaChain" };
         return { symbol: "ETH", chainName: null };
     };
 
@@ -100,10 +100,12 @@ export function CrossChainHeader() {
     const privateBalanceTotal = useMemo(() => {
         if (!privateBalances.length || !privateBalances[0]) return null;
         const balance = Number(formatEther(privateBalances[0].balance));
+        const logoUrl = getTokenLogoUrl(privateBalances[0].address);
         return {
             amount: balance.toFixed(2),
             symbol: privateBalances[0].symbol,
-            hasMore: privateBalances.length > 1
+            hasMore: privateBalances.length > 1,
+            logoUrl: logoUrl
         };
     }, [privateBalances]);
 
@@ -212,9 +214,18 @@ export function CrossChainHeader() {
                             
                             {/* 右半邊：主幣種餘額 */}
                             {privateBalanceTotal ? (
-                                <span className="font-bold text-sm text-gray-700">
-                                    {privateBalanceTotal.amount} {privateBalanceTotal.symbol}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {privateBalanceTotal.logoUrl && (
+                                        <img 
+                                            src={privateBalanceTotal.logoUrl} 
+                                            alt={privateBalanceTotal.symbol}
+                                            className="w-4 h-4 rounded-full"
+                                        />
+                                    )}
+                                    <span className="font-bold text-sm text-gray-700">
+                                        {privateBalanceTotal.amount} {privateBalanceTotal.symbol}
+                                    </span>
+                                </div>
                             ) : (
                                 <span className="font-bold text-sm text-gray-400">0.00</span>
                             )}
@@ -333,112 +344,8 @@ export function CrossChainHeader() {
                 )}
             </div>
 
-            {/* 右上角：EVM 錢包區塊 + 網路切換 */}
+            {/* 右上角：網路切換 + EVM 錢包區塊 */}
             <div className="flex items-center gap-3">
-                {/* EVM 錢包區塊 */}
-                {isConnected && address ? (
-                    <div className="relative" ref={evmWalletCardRef}>
-                        <button
-                            onClick={() => setShowEvmWalletCard(!showEvmWalletCard)}
-                            className="h-10 flex items-center gap-3 px-4 border-2 border-black rounded-full bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
-                        >
-                            {/* 左半邊：圖示 + 地址 */}
-                            <div className="flex items-center gap-2">
-                                <Wallet className="w-4 h-4 text-gray-900" />
-                                <span className="font-bold text-sm text-gray-900">
-                                    {address.slice(0, 6)}...{address.slice(-4)}
-                                </span>
-                            </div>
-                            
-                            {/* 右半邊：鏈餘額 */}
-                            {(() => {
-                                const tokenInfo = getCurrentChainTokenSymbol();
-                                const chainDisplay = getCurrentChainDisplay();
-                                return (
-                                    <div className="flex items-center gap-2">
-                                        {tokenInfo.chainName && chainDisplay.logo && (
-                                            <img 
-                                                src={chainDisplay.logo} 
-                                                alt={tokenInfo.chainName}
-                                                className="w-4 h-4 rounded-full"
-                                            />
-                                        )}
-                                        <span className="font-bold text-sm text-gray-700">
-                                            {parseFloat(walletBalance || "0").toFixed(4)} {tokenInfo.symbol}
-                                        </span>
-                                    </div>
-                                );
-                            })()}
-                        </button>
-
-                        {/* 彈出的清單選單 */}
-                        {showEvmWalletCard && (
-                            <div 
-                                className="absolute right-0 top-full mt-1 min-w-full border-2 border-black rounded-lg bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] z-50 overflow-hidden"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {/* 第一行：當前鏈餘額 */}
-                                {(() => {
-                                    const tokenInfo = getCurrentChainTokenSymbol();
-                                    const chainDisplay = getCurrentChainDisplay();
-                                    return (
-                                        <div className="px-4 py-3 border-b-2 border-gray-200">
-                                            <div className="text-xs font-bold text-gray-500 mb-2">當前鏈餘額</div>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                    {tokenInfo.chainName && chainDisplay.logo && (
-                                                        <img 
-                                                            src={chainDisplay.logo} 
-                                                            alt={tokenInfo.chainName}
-                                                            className="w-5 h-5 rounded-full flex-shrink-0"
-                                                        />
-                                                    )}
-                                                    <div className="flex flex-col min-w-0 flex-1">
-                                                        <span className="text-sm font-bold text-gray-700">{tokenInfo.symbol}</span>
-                                                        <span className="text-xs text-gray-400 font-mono">
-                                                            Native Token
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <span className="text-sm font-bold text-gray-900 ml-2">
-                                                    {parseFloat(walletBalance || "0").toFixed(4)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-                                
-                                {/* 分隔線 */}
-                                <div className="border-t-2 border-gray-300"></div>
-                                
-                                {/* Copy 地址選項 */}
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        copyToClipboard(address, "EVM Address");
-                                        setShowEvmWalletCard(false);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm font-bold text-gray-700 hover:bg-gray-100 transition-colors"
-                                >
-                                    <Copy className="w-4 h-4" />
-                                    <span>Copy Address</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <Button
-                        onClick={() => {
-                            connectWallet().catch((e) => {
-                                console.error('connectWallet error:', e);
-                            });
-                        }}
-                        className="h-10 px-4 border-2 border-black rounded-full bg-white text-black hover:bg-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
-                    >
-                        連接錢包
-                    </Button>
-                )}
-                
                 {/* 網路切換按鈕（獨立區塊） */}
                 <div className="relative" ref={menuRef}>
                     <Button
@@ -507,6 +414,114 @@ export function CrossChainHeader() {
                         </div>
                     )}
                 </div>
+                
+                {/* EVM 錢包區塊 */}
+                {isConnected && address ? (
+                    <div className="relative" ref={evmWalletCardRef}>
+                        <button
+                            onClick={() => setShowEvmWalletCard(!showEvmWalletCard)}
+                            className="h-10 flex items-center gap-3 px-4 border-2 border-black rounded-full bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-50 active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+                        >
+                            {/* 左半邊：圖示 + 地址 */}
+                            <div className="flex items-center gap-2">
+                                <Wallet className="w-4 h-4 text-gray-900" />
+                                <span className="font-bold text-sm text-gray-900">
+                                    {address.slice(0, 6)}...{address.slice(-4)}
+                                </span>
+                            </div>
+                            
+                            {/* 右半邊：鏈餘額 */}
+                            {(() => {
+                                const tokenInfo = getCurrentChainTokenSymbol();
+                                const chainDisplay = getCurrentChainDisplay();
+                                // 對於 ZetaChain，使用鏈的 LOGO；對於其他鏈，如果有 chainName 則使用鏈 LOGO
+                                const shouldShowLogo = chainDisplay.logo && (tokenInfo.chainName || currentChainName?.toUpperCase().includes("ZETACHAIN"));
+                                return (
+                                    <div className="flex items-center gap-2">
+                                        {shouldShowLogo && chainDisplay.logo && (
+                                            <img 
+                                                src={chainDisplay.logo} 
+                                                alt={tokenInfo.chainName || chainDisplay.name}
+                                                className="w-4 h-4 rounded-full"
+                                            />
+                                        )}
+                                        <span className="font-bold text-sm text-gray-700">
+                                            {parseFloat(walletBalance || "0").toFixed(4)} {tokenInfo.symbol}
+                                        </span>
+                                    </div>
+                                );
+                            })()}
+                        </button>
+
+                        {/* 彈出的清單選單 */}
+                        {showEvmWalletCard && (
+                            <div 
+                                className="absolute right-0 top-full mt-1 min-w-full border-2 border-black rounded-lg bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] z-50 overflow-hidden"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* 第一行：當前鏈餘額 */}
+                                {(() => {
+                                    const tokenInfo = getCurrentChainTokenSymbol();
+                                    const chainDisplay = getCurrentChainDisplay();
+                                    // 對於 ZetaChain，使用鏈的 LOGO；對於其他鏈，如果有 chainName 則使用鏈 LOGO
+                                    const shouldShowLogo = chainDisplay.logo && (tokenInfo.chainName || currentChainName?.toUpperCase().includes("ZETACHAIN"));
+                                    return (
+                                        <div className="px-4 py-3 border-b-2 border-gray-200">
+                                            <div className="text-xs font-bold text-gray-500 mb-2">當前鏈餘額</div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                    {shouldShowLogo && chainDisplay.logo && (
+                                                        <img 
+                                                            src={chainDisplay.logo} 
+                                                            alt={tokenInfo.chainName || chainDisplay.name}
+                                                            className="w-5 h-5 rounded-full flex-shrink-0"
+                                                        />
+                                                    )}
+                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                        <span className="text-sm font-bold text-gray-700">{tokenInfo.symbol}</span>
+                                                        <span className="text-xs text-gray-400 font-mono">
+                                                            Native Token
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-900 ml-2">
+                                                    {parseFloat(walletBalance || "0").toFixed(4)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                                
+                                {/* 分隔線 */}
+                                <div className="border-t-2 border-gray-300"></div>
+                                
+                                {/* Copy 地址選項 */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(address, "EVM Address");
+                                        setShowEvmWalletCard(false);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm font-bold text-gray-700 hover:bg-gray-100 transition-colors"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                    <span>Copy Address</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <Button
+                        onClick={() => {
+                            connectWallet().catch((e) => {
+                                console.error('connectWallet error:', e);
+                            });
+                        }}
+                        className="h-10 px-4 border-2 border-black rounded-full bg-white text-black hover:bg-gray-100 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+                    >
+                        連接錢包
+                    </Button>
+                )}
             </div>
         </header>
     );

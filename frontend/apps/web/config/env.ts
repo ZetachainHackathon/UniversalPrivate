@@ -131,12 +131,14 @@ export const CONFIG = {
             EVM_ADAPT: "0x7bE4f15d073611A13A9C3C123500Ae445F546246",
             ZRC20_GAS: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0", // ETH.ETHSEP
             CHAIN_LOGO: "https://sepolia.dev/wp-content/uploads/elementor/thumbs/the-dolphin-po0q7ezlhqqzvrfmzw0atih2l0vqelut73w4eh5qtc.png",
+            EXPLORER_URL: "https://sepolia.etherscan.io",
         },
         ZETACHAIN: {
             ID_DEC: 7001,
             ID_HEX: "0x1b59",
             ZETACHAIN_ADAPT: "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1",
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zetachain/info/logo.png",
+            EXPLORER_URL: "https://testnet.zetascan.com",
         },
         BASE_SEPOLIA: {
             ID_DEC: 84532,
@@ -144,6 +146,7 @@ export const CONFIG = {
             EVM_ADAPT: "0xa47677E3c066281D6f259B92552fAD50076D16d0",
             ZRC20_GAS: "0x236b0DE675cC8F46AE186897fCCeFe3370C9eDeD", // ETH.BASESEP
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png",
+            EXPLORER_URL: "https://sepolia.basescan.org",
         },
         ARBITRUM_SEPOLIA: {
             ID_DEC: 421614,
@@ -151,6 +154,7 @@ export const CONFIG = {
             EVM_ADAPT: "0x806bF9E4A9fF5Da69540760831aF2e5360a80351", // TODO: Deploy EVMAdapt on Arbitrum Sepolia
             ZRC20_GAS: "0x1de70f3e971B62A0707dA18100392af14f7fB677", // ETH.ARBSEP
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png",
+            EXPLORER_URL: "https://sepolia.arbiscan.io",
         },
         BSC_TESTNET: {
             ID_DEC: 97,
@@ -158,6 +162,7 @@ export const CONFIG = {
             EVM_ADAPT: "0x806bF9E4A9fF5Da69540760831aF2e5360a80351",
             ZRC20_GAS: "0xd97B1de3619ed2c6BEb3860147E30cA8A7dC9891", // BNB.BSC
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png",
+            EXPLORER_URL: "https://testnet.bscscan.com",
         },
         KAIA_TESTNET: {
             ID_DEC: 1001,
@@ -165,6 +170,7 @@ export const CONFIG = {
             EVM_ADAPT: "0x806bF9E4A9fF5Da69540760831aF2e5360a80351",
             ZRC20_GAS: "0xe1A4f44b12eb72DC6da556Be9Ed1185141d7C23c", // KAIA.KAIROS
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png",
+            EXPLORER_URL: "https://kaia-testnet.klaytnscope.com",
         },
         AVALANCHE_TEST: {
             ID_DEC: 43113,
@@ -172,13 +178,15 @@ export const CONFIG = {
             EVM_ADAPT: "0x806bF9E4A9fF5Da69540760831aF2e5360a80351",
             ZRC20_GAS: "0xEe9CC614D03e7Dbe994b514079f4914a605B4719", // AVAX.FUJI
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png",
+            EXPLORER_URL: "https://testnet.snowtrace.io",
         },
         POLYGON_AMOY: {
             ID_DEC: 80002,
             ID_HEX: "0x13882",
-            EVM_ADAPT: "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
+            EVM_ADAPT: "0x93D68B4C0793fF1D4D11f049F8682a1e256aC59d",
             ZRC20_GAS: "0x777915D031d1e8144c90D025C594b3b8Bf07a08d", // POL.AMOY
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png",
+            EXPLORER_URL: "https://amoy.polygonscan.com",
         }
     },
     FEES: {
