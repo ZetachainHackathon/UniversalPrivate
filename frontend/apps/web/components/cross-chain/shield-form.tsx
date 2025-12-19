@@ -259,7 +259,7 @@ export function ShieldForm({
                     <div className="relative">
                         <input
                             type="number"
-                            className="w-full p-4 border-2 border-black rounded-lg text-xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 pr-20"
+                            className="w-full p-4 border-2 border-black rounded-lg text-xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 pr-20 no-spinner"
                             value={amount}
                             onChange={(e) => {
                                 setAmount(e.target.value);
