@@ -176,7 +176,7 @@ export const CONFIG = {
         POLYGON_AMOY: {
             ID_DEC: 80002,
             ID_HEX: "0x13882",
-            EVM_ADAPT: "0xc4660f40BA6Fe89b3BA7Ded44Cf1DB73D731c95e",
+            EVM_ADAPT: "0x93D68B4C0793fF1D4D11f049F8682a1e256aC59d",
             ZRC20_GAS: "0x777915D031d1e8144c90D025C594b3b8Bf07a08d", // POL.AMOY
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png",
         }
