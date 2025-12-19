@@ -28,8 +28,9 @@ graph TD
 
     subgraph "ZetaChain (Privacy Layer)"
         ZetaAdapt[Zetachain Adapt Contract]
-        RelayAdapt[Relay Adapt (Execution Layer)]
-        RailgunWallet[Railgun Smart Wallet (0zk System)]
+        %% Added quotes to the lines below to fix the error
+        RelayAdapt["Relay Adapt (Execution Layer)"]
+        RailgunWallet["Railgun Smart Wallet (0zk System)"]
         DeFi[DeFi Protocols]
     end
 
@@ -46,7 +47,7 @@ graph TD
     ZetaAdapt -- "Cross-Chain Message" --> EVMAdapt
     EVMAdapt -- "Funds" --> User
 
-    style ZetaChain fill:#e9f5ff,stroke:#005da0,stroke-width:2px;
+    style ZetaChain fill:#e9f5ff,stroke:#005da0,stroke-width:2px
 ```
 
 ## 📂 Project Structure
