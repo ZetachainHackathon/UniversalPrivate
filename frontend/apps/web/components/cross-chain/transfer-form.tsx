@@ -32,7 +32,7 @@ export function TransferForm({
     // 獲取有餘額的 Token 列表
     const tokensWithBalance = useMemo(() => {
         if (!balances?.erc20Amounts) return [];
-        
+
         return balances.erc20Amounts
             .filter((token: any) => token.amount > 0n)
             .map((token: any) => ({
@@ -50,13 +50,28 @@ export function TransferForm({
 
     const [showTokenMenu, setShowTokenMenu] = useState(false);
     const tokenMenuRef = useRef<HTMLDivElement>(null);
+    const [sliderValue, setSliderValue] = useState(0);
+
+    const handlePercentageChange = (percent: number) => {
+        setSliderValue(percent);
+        const token = tokensWithBalance.find((t: { address: string; symbol: string; balance: bigint }) => t.address === selectedToken.address);
+        if (token) {
+            const balanceEther = formatEther(token.balance);
+            const balanceVal = parseFloat(balanceEther);
+            if (!isNaN(balanceVal) && balanceVal > 0) {
+                const newAmount = (balanceVal * percent) / 100;
+                // Use a reasonable precision, e.g. 6 decimal places
+                setAmount(newAmount === 0 ? "" : parseFloat(newAmount.toFixed(6)).toString());
+            }
+        }
+    };
 
     // 獲取當前選擇的 Token 信息
     const selectedToken = useMemo(() => {
         if (!tokenAddress || tokenAddress === ZeroAddress || tokenAddress === "") {
             return { symbol: "WZETA", address: ZeroAddress, logoUrl: CONFIG.TOKENS.WZETA.logoUrl };
         }
-        
+
         return {
             symbol: getTokenSymbol(tokenAddress),
             address: tokenAddress,
@@ -111,8 +126,8 @@ export function TransferForm({
                             className="w-full p-3 border-2 border-black rounded-lg bg-white font-medium flex items-center gap-2 hover:bg-gray-100 transition-colors"
                         >
                             {selectedToken.logoUrl && (
-                                <img 
-                                    src={selectedToken.logoUrl} 
+                                <img
+                                    src={selectedToken.logoUrl}
                                     alt={selectedToken.symbol}
                                     className="w-5 h-5 rounded-full"
                                 />
@@ -126,13 +141,13 @@ export function TransferForm({
                                 )
                             </span>
                             <span className="text-xs text-gray-400 font-mono">
-                                {selectedToken.address === ZeroAddress 
+                                {selectedToken.address === ZeroAddress
                                     ? "Native Token"
                                     : `${selectedToken.address.slice(0, 6)}...${selectedToken.address.slice(-4)}`}
                             </span>
                             <span className="text-gray-400">▼</span>
                         </button>
-                        
+
                         {showTokenMenu && (
                             <div className="absolute z-50 w-full mt-2 bg-white border-2 border-black rounded-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-60 overflow-y-auto">
                                 {tokensWithBalance.map((token: { address: string; symbol: string; balance: bigint }) => {
@@ -146,13 +161,12 @@ export function TransferForm({
                                                 setTokenAddress(token.address);
                                                 setShowTokenMenu(false);
                                             }}
-                                            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${
-                                                isSelected ? "bg-gray-200 font-bold" : ""
-                                            }`}
+                                            className={`w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-100 transition-colors ${isSelected ? "bg-gray-200 font-bold" : ""
+                                                }`}
                                         >
                                             {tokenLogoUrl && (
-                                                <img 
-                                                    src={tokenLogoUrl} 
+                                                <img
+                                                    src={tokenLogoUrl}
                                                     alt={token.symbol}
                                                     className="w-6 h-6 rounded-full"
                                                 />
@@ -161,7 +175,7 @@ export function TransferForm({
                                                 {token.symbol} ({formatEther(token.balance).slice(0, 8)})
                                             </span>
                                             <span className="text-xs text-gray-400 font-mono">
-                                                {token.address === ZeroAddress 
+                                                {token.address === ZeroAddress
                                                     ? "Native Token"
                                                     : `${token.address.slice(0, 6)}...${token.address.slice(-4)}`}
                                             </span>
@@ -179,19 +193,64 @@ export function TransferForm({
                 )}
             </div>
 
-            <div className="space-y-2">
-                <label className="font-bold">金額 (Amount)</label>
+            <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                    <label className="font-bold">金額 (Amount)</label>
+                    <p className="text-sm text-gray-500 font-mono">
+                        Balance: {(() => {
+                            const token = tokensWithBalance.find((t: { address: string; symbol: string; balance: bigint }) => t.address === selectedToken.address);
+                            return token ? formatEther(token.balance).slice(0, 8) : "0";
+                        })()} {selectedToken.symbol}
+                    </p>
+                </div>
+
                 <div className="relative">
-                    <input
-                        type="number"
-                        step="any"
-                        className="w-full p-4 border-2 border-black rounded-lg text-xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">
-                        {selectedToken.symbol}
-                    </span>
+                    <div className="relative">
+                        <input
+                            type="number"
+                            step="any"
+                            className="w-full p-4 border-2 border-black rounded-lg text-xl font-mono focus:outline-none focus:ring-2 focus:ring-black/20 pr-20"
+                            value={amount}
+                            onChange={(e) => {
+                                setAmount(e.target.value);
+                                setSliderValue(0);
+                            }}
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-gray-500">
+                            {selectedToken.symbol}
+                        </span>
+                    </div>
+
+                    {/* Slider & Percentage Buttons */}
+                    <div className="mt-4 space-y-3">
+                        <div className="flex items-center gap-4">
+                            <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={sliderValue}
+                                onChange={(e) => handlePercentageChange(Number(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black border border-black"
+                            />
+                            <span className="font-mono font-bold w-12 text-right">{sliderValue}%</span>
+                        </div>
+
+                        <div className="flex gap-2">
+                            {[25, 50, 75, 100].map((percent) => (
+                                <button
+                                    key={percent}
+                                    type="button"
+                                    onClick={() => handlePercentageChange(percent)}
+                                    className={`flex-1 py-2 rounded-lg font-bold border-2 transition-all ${sliderValue === percent
+                                        ? "bg-black text-white border-black"
+                                        : "bg-white text-black border-black hover:bg-gray-100"
+                                        }`}
+                                >
+                                    {percent === 100 ? "Max" : `${percent}%`}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 
