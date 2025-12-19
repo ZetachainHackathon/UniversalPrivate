@@ -438,7 +438,7 @@ export function CrossChainHeader() {
                                 const shouldShowLogo = chainDisplay.logo && (tokenInfo.chainName || currentChainName?.toUpperCase().includes("ZETACHAIN"));
                                 return (
                                     <div className="flex items-center gap-2">
-                                        {shouldShowLogo && (
+                                        {shouldShowLogo && chainDisplay.logo && (
                                             <img 
                                                 src={chainDisplay.logo} 
                                                 alt={tokenInfo.chainName || chainDisplay.name}
@@ -470,7 +470,7 @@ export function CrossChainHeader() {
                                             <div className="text-xs font-bold text-gray-500 mb-2">當前鏈餘額</div>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                    {shouldShowLogo && (
+                                                    {shouldShowLogo && chainDisplay.logo && (
                                                         <img 
                                                             src={chainDisplay.logo} 
                                                             alt={tokenInfo.chainName || chainDisplay.name}

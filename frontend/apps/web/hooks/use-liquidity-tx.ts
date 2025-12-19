@@ -31,8 +31,10 @@ interface UseLiquidityTxProps {
 export const useLiquidityTransaction = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [txHash, setTxHash] = useState("");
+    const [txChain, setTxChain] = useState<string>("");
     const [isLoadingRemove, setIsLoadingRemove] = useState(false);
     const [txHashRemove, setTxHashRemove] = useState("");
+    const [txChainRemove, setTxChainRemove] = useState<string>("");
 
     const { signer, isConnected, connectWallet, getCurrentChainId } = useWallet();
     const { walletInfo, encryptionKey, refresh } = useRailgun();
@@ -181,6 +183,7 @@ export const useLiquidityTransaction = () => {
 
                 toast.loading(CONTENT.TOASTS.TX_SUBMITTED, { id: toastId });
                 setTxHash(txResponse.hash);
+                setTxChain(currentChainKey || ""); // 記錄交易發送的鏈
                 toast.success(CONTENT.TOASTS.TX_SUBMITTED, { id: toastId });
                 
                 // 等待交易確認後，自動刷新 Railgun 餘額以顯示新的 LP Token
@@ -387,6 +390,7 @@ export const useLiquidityTransaction = () => {
 
             toast.loading(CONTENT.TOASTS.TX_SUBMITTED, { id: toastId });
             setTxHashRemove(txResponse.hash);
+            setTxChainRemove(currentChainKey || ""); // 記錄交易發送的鏈
             toast.success(CONTENT.TOASTS.TX_SUBMITTED, { id: toastId });
             
             // 等待交易確認後，自動刷新 Railgun 餘額
@@ -431,6 +435,8 @@ export const useLiquidityTransaction = () => {
         isLoadingRemove,
         txHash,
         txHashRemove,
+        txChain,
+        txChainRemove,
     };
 };
 
