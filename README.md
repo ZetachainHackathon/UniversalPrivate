@@ -52,7 +52,7 @@ graph TD
 ## 📂 Project Structure
 
 *   `contract/`: Smart contracts including `ZetaChainAdapt` (ZetaChain) and `EVMAdapt` (Other EVM chains).
-*   `frontend/`: A Next.js Web Application demonstrating the full capabilities of Universal Private.
+*   `frontend/`: [Frontend Documentation](frontend/README.md) - Next.js Web Application demonstrating the full capabilities of Universal Private.
 *   `test/`: Node.js scripts for backend testing and command-line usage demos.
 *   `frontend/packages/sdk/`: The **Universal Private SDK** source code.
 

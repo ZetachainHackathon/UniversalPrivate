@@ -1,17 +1,17 @@
-# ✅ Next.js + Tailwind CSS + shadcn/ui 配置完成！
+# Universal Private Frontend Setup
 
-## 🎉 已完成的工作
+## 🎉 Setup Complete
 
-你的 monorepo 已经完整配置好 Next.js、Tailwind CSS 和 shadcn/ui 的所有必要设置。
+This monorepo is fully configured with Next.js, Tailwind CSS, and shadcn/ui.
 
-### ✅ 已安装的依赖
+### ✅ Installed Dependencies
 
-#### `apps/web` (Next.js 应用)
+#### `apps/web` (Next.js Application)
 - tailwindcss
 - postcss
 - autoprefixer
 
-#### `packages/ui` (共享组件库)
+#### `packages/ui` (Shared Component Library)
 - tailwindcss
 - postcss
 - autoprefixer
@@ -22,51 +22,51 @@
 - tailwindcss-animate
 - lucide-react
 
-### ✅ 创建/更新的文件
+### ✅ Created/Updated Files
 
-#### 配置文件
-- ✅ `apps/web/tailwind.config.ts` - Tailwind 配置
-- ✅ `apps/web/postcss.config.js` - PostCSS 配置
-- ✅ `apps/web/tsconfig.json` - 添加了路径别名
-- ✅ `packages/ui/tailwind.config.ts` - Tailwind 配置
-- ✅ `packages/ui/postcss.config.js` - PostCSS 配置
-- ✅ `packages/ui/tsconfig.json` - 添加了路径别名
-- ✅ `packages/ui/components.json` - shadcn/ui 配置
+#### Configuration Files
+- ✅ `apps/web/tailwind.config.ts` - Tailwind Config
+- ✅ `apps/web/postcss.config.js` - PostCSS Config
+- ✅ `apps/web/tsconfig.json` - Path Aliases
+- ✅ `packages/ui/tailwind.config.ts` - Tailwind Config
+- ✅ `packages/ui/postcss.config.js` - PostCSS Config
+- ✅ `packages/ui/tsconfig.json` - Path Aliases
+- ✅ `packages/ui/components.json` - shadcn/ui Config
 
-#### 样式文件
-- ✅ `apps/web/app/globals.css` - 更新为 shadcn/ui 主题变量
-- ✅ `packages/ui/src/globals.css` - shadcn/ui 样式
+#### Style Files
+- ✅ `apps/web/app/globals.css` - Updated with shadcn/ui theme variables
+- ✅ `packages/ui/src/globals.css` - shadcn/ui styles
 
-#### 组件文件
-- ✅ `packages/ui/src/button.tsx` - 完整的 shadcn/ui Button
-- ✅ `packages/ui/src/card.tsx` - 完整的 shadcn/ui Card
-- ✅ `packages/ui/src/lib/utils.ts` - cn() 工具函数
+#### Component Files
+- ✅ `packages/ui/src/button.tsx` - Complete shadcn/ui Button
+- ✅ `packages/ui/src/card.tsx` - Complete shadcn/ui Card
+- ✅ `packages/ui/src/lib/utils.ts` - cn() utility
 
 #### Package.json
-- ✅ `apps/web/package.json` - 添加了 Tailwind 依赖
-- ✅ `packages/ui/package.json` - 添加了所有 shadcn/ui 依赖和正确的导出配置
+- ✅ `apps/web/package.json` - Tailwind dependencies added
+- ✅ `packages/ui/package.json` - All shadcn/ui dependencies and exports added
 
-## 🚀 下一步操作
+## 🚀 Next Steps
 
-### 1. 安装依赖（必须！）
+### 1. Install Dependencies (Mandatory!)
 
-在 `frontend` 目录下运行：
+Run inside `frontend` directory:
 
 ```bash
 pnpm install
 ```
 
-### 2. 启动开发服务器
+### 2. Start Development Server
 
 ```bash
 pnpm dev
 ```
 
-访问: http://localhost:3000
+App available at: http://localhost:3000
 
-## 📝 使用示例
+## 📝 Usage Example
 
-在 `apps/web/app/page.tsx` 中使用组件：
+Using components in `apps/web/app/page.tsx`:
 
 ```tsx
 import { Button } from "@repo/ui/button";
@@ -83,15 +83,15 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <Card className="w-[400px]">
         <CardHeader>
-          <CardTitle>欢迎使用</CardTitle>
+          <CardTitle>Welcome</CardTitle>
           <CardDescription>
-            您的 Next.js + Tailwind + shadcn/ui 已配置完成
+            Your Next.js + Tailwind + shadcn/ui is ready
           </CardDescription>
         </CardHeader>
         <CardContent className="flex gap-2">
-          <Button>主要按钮</Button>
-          <Button variant="outline">次要按钮</Button>
-          <Button variant="ghost">Ghost 按钮</Button>
+          <Button>Primary</Button>
+          <Button variant="outline">Secondary</Button>
+          <Button variant="ghost">Ghost</Button>
         </CardContent>
       </Card>
     </main>
@@ -99,7 +99,7 @@ export default function Home() {
 }
 ```
 
-## 🎨 添加更多 shadcn/ui 组件
+## 🎨 Adding More shadcn/ui Components
 
 ```bash
 cd packages/ui
@@ -110,109 +110,113 @@ npx shadcn@latest add select
 npx shadcn@latest add form
 ```
 
-**重要：** 添加新组件后，记得在 `packages/ui/package.json` 的 `exports` 中添加：
+**IMPORTANT:** After adding a new component, remember to update `exports` in `packages/ui/package.json`:
 
 ```json
 {
   "exports": {
     "./button": "./src/button.tsx",
     "./card": "./src/card.tsx",
-    "./dialog": "./src/components/ui/dialog.tsx",  // 新增
-    "./input": "./src/components/ui/input.tsx"     // 新增
+    "./dialog": "./src/components/ui/dialog.tsx",  // New
+    "./input": "./src/components/ui/input.tsx"     // New
   }
 }
 ```
 
-## 🎨 自定义主题颜色
+## 🎨 Customizing Theme
 
-编辑 `apps/web/app/globals.css` 或 `packages/ui/src/globals.css`:
+Edit CSS variables in `apps/web/app/globals.css` or `packages/ui/src/globals.css`:
 
 ```css
 :root {
-  --primary: 222.2 47.4% 11.2%;      /* 主色调 */
-  --secondary: 210 40% 96.1%;        /* 次要色 */
-  --accent: 210 40% 96.1%;           /* 强调色 */
-  --destructive: 0 84.2% 60.2%;      /* 警告/删除色 */
-  --radius: 0.5rem;                   /* 圆角大小 */
+  --primary: 222.2 47.4% 11.2%;      /* Primary Color */
+  --secondary: 210 40% 96.1%;        /* Secondary Color */
+  --accent: 210 40% 96.1%;           /* Accent Color */
+  --destructive: 0 84.2% 60.2%;      /* Warning/Error Color */
+  --radius: 0.5rem;                   /* Radius */
 }
 ```
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 frontend/
 ├── apps/
-│   └── web/                         ✅ Next.js 应用
+│   └── web/                         ✅ Next.js App
 │       ├── app/
-│       │   ├── globals.css          ✅ Tailwind + shadcn/ui 样式
+│       │   ├── globals.css          ✅ Tailwind + shadcn/ui styles
 │       │   ├── layout.tsx
 │       │   └── page.tsx
-│       ├── tailwind.config.ts       ✅ Tailwind 配置
-│       ├── postcss.config.js        ✅ PostCSS 配置
-│       └── package.json             ✅ 包含 Tailwind 依赖
+│       ├── tailwind.config.ts       ✅ Tailwind Config
+│       ├── postcss.config.js        ✅ PostCSS Config
+│       └── package.json             ✅ Tailwind Deps
 │
 └── packages/
-    └── ui/                          ✅ 共享组件库
+    └── ui/                          ✅ Shared UI Library
         ├── src/
         │   ├── button.tsx           ✅ shadcn/ui Button
         │   ├── card.tsx             ✅ shadcn/ui Card
-        │   ├── globals.css          ✅ shadcn/ui 样式
+        │   ├── globals.css          ✅ shadcn/ui styles
         │   └── lib/
-        │       └── utils.ts         ✅ cn() 工具函数
-        ├── components.json          ✅ shadcn/ui 配置
-        ├── tailwind.config.ts       ✅ Tailwind 配置
-        ├── postcss.config.js        ✅ PostCSS 配置
-        └── package.json             ✅ 所有必要依赖
+        │       └── utils.ts         ✅ cn() utility
+        ├── components.json          ✅ shadcn/ui Config
+        ├── tailwind.config.ts       ✅ Tailwind Config
+        ├── postcss.config.js        ✅ PostCSS Config
+        └── package.json             ✅ All necessary deps
 ```
 
-## 🛠️ 可用的脚本
+## 🛠️ Available Scripts
 
 ```bash
-# 启动开发服务器
+# Start Dev Server
 pnpm dev
 
-# 构建生产版本
+# Build Production
 pnpm build
 
-# 运行 ESLint
+# Run ESLint
 pnpm lint
 
-# 格式化代码
+# Format Code
 pnpm format
 
-# 类型检查
+# Type Check
 pnpm check-types
+
+# Run E2E Tests (Playwright)
+cd apps/web
+npx playwright test
 ```
 
-## 📚 相关文档
+## 📚 Resources
 
-- [Next.js 文档](https://nextjs.org/docs)
-- [Tailwind CSS 文档](https://tailwindcss.com/docs)
-- [shadcn/ui 文档](https://ui.shadcn.com)
-- [Turborepo 文档](https://turbo.build/repo/docs)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [shadcn/ui Documentation](https://ui.shadcn.com)
+- [Turborepo Documentation](https://turbo.build/repo/docs)
 
-## 💡 提示
+## 💡 Tips
 
-1. 所有 shadcn/ui 组件都应该添加到 `packages/ui` 包中
-2. 从 `@repo/ui/[component]` 导入组件使用
-3. 记得在添加新组件后更新 `packages/ui/package.json` 的 exports
-4. 使用 `cn()` 函数合并 Tailwind 类名
+1. All shadcn/ui components should be added to `packages/ui`.
+2. Import components from `@repo/ui/[component]`.
+3. Remember to update `exports` in `packages/ui/package.json` after adding new components.
+4. Use `cn()` utility to merge Tailwind classes.
 
-## 🐛 遇到问题？
+## 🐛 Troubleshooting
 
-### Tailwind 样式不生效
-- 确保已运行 `pnpm install`
-- 确保在 `layout.tsx` 中导入了 `globals.css`
-- 检查 `tailwind.config.ts` 的 `content` 路径配置
+### Tailwind styles not working
+- Ensure `pnpm install` has been run.
+- Ensure `globals.css` is imported in `layout.tsx`.
+- Check `content` paths in `tailwind.config.ts`.
 
-### 组件导入错误
-- 检查 `packages/ui/package.json` 的 `exports` 字段
-- 确保组件路径正确
+### Component import errors
+- Check `packages/ui/package.json` `exports` field.
+- Ensure component paths are correct.
 
-### TypeScript 路径错误
-- 确保 `tsconfig.json` 中的 `paths` 配置正确
-- 重启 VS Code TypeScript 服务器
+### TypeScript path errors
+- Ensure `paths` config in `tsconfig.json` is correct.
+- Restart VS Code TypeScript Server.
 
 ---
 
-**配置完成！** 现在可以开始构建你的应用了 🎉
+**Setup Complete!** You can now start building your app. 🎉
