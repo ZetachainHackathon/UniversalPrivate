@@ -9,33 +9,178 @@
 - Run `hh help` or `npx hardhat help` for list of commands
 
 
-### Architecture
+### System Architecture
 
+This section details the internal architecture of the Railgun Privacy System on ZetaChain, verified against the actual smart contract codebase.
+
+#### 1. High-Level System Architecture
+
+Railgun on ZetaChain orchestrates privacy through a layered approach: **Adapt Layer** (Cross-Chain), **Executor Layer** (RelayAdapt), and **Core Privacy Layer** (Smart Wallet).
+
+```mermaid
+graph TD
+    User((User))
+    
+    subgraph "Adapt Layer (Cross-Chain)"
+        EVMAdapt["EVMAdapt (Remote Chain)"]
+        ZRC20[ZRC-20 Token]
+        ZetaAdapt[ZetachainAdapt]
+        
+        EVMAdapt -.->|Cross-Chain Message| ZetaAdapt
+        ZetaAdapt -->|Approve/Call| ZRC20
+    end
+
+    subgraph "Executor Layer"
+        RelayAdapt[RelayAdapt]
+        DeFi[Uniswap/Sushi]
+        
+        ZetaAdapt -->|Delegate Call| RelayAdapt
+        RelayAdapt -->|Multicall| DeFi
+    end
+
+    subgraph "Core Privacy Layer"
+        Proxy[RailgunProxy]
+        Logic[RailgunLogic]
+        Verifier[Verifier]
+        
+        RelayAdapt -->|Shield/Transact| Proxy
+        Proxy -->|DelegateCall| Logic
+        Logic -->|Verify Proof| Verifier
+    end
+    
+    User -->|Direct Interaction| Proxy
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                      Cross-Chain Ecosystem                       │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  Other EVM Chains                     ZetaChain                  │
-│  ┌─────────────┐                    ┌──────────────────┐         │
-│  │  EVMAdapt   │───Cross-Chain Msg──▶│ ZetachainAdapt   │        │
-│  └─────────────┘                    └────────┬─────────┘         │
-│                                               │                  │
-│                                               │ Delegate Complex │
-│                                               │ Operation        │
-│                                               ▼                  │
-│                                      ┌──────────────────┐        │
-│                                      │   RelayAdapt     │        │
-│                                      │ (Universal Exec) │        │
-│                                      └────────┬─────────┘        │
-│                                               │                  │
-│                                               │                  │
-│                                               ▼                  │
-│                                      ┌───────────────────┐       │
-│                                      │ RailgunSmartWallet│       │
-│                                      └───────────────────┘       │
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
+
+#### 2. Modular Core Logic
+
+The `RailgunSmartWallet` is the tip of an inheritance iceberg. It combines token handling, governance, and cryptographic verification.
+
+```mermaid
+classDiagram
+    class OwnableUpgradeable {
+        +transferOwnership(newOwner)
+        +owner()
+    }
+    class TokenBlocklist {
+        +mapping tokenBlocklist
+    }
+    class Commitments {
+        +mapping merkleRoots
+        +mapping nullifiers
+        +insertLeaves()
+    }
+    class Verifier {
+        +verify(transaction)
+    }
+    class RailgunLogic {
+        +uint120 shieldFee
+        +uint120 unshieldFee
+        +validateTransaction()
+        +accumulateAndNullifyTransaction()
+    }
+    class RailgunSmartWallet {
+        +shield(ShieldRequest)
+        +transact(Transaction)
+    }
+
+    RailgunLogic --|> OwnableUpgradeable
+    RailgunLogic --|> TokenBlocklist
+    RailgunLogic --|> Commitments
+    RailgunLogic --|> Verifier
+    RailgunSmartWallet --|> RailgunLogic
+```
+
+#### 3. Proxy Storage & Upgrade Pattern
+
+The system uses a **PausableUpgradableProxy**. State is strictly separated from Logic using EIP-1967 storage slots to ensure upgrade safety without data incompatibility.
+
+```mermaid
+graph TD
+    subgraph "PausableUpgradableProxy"
+        Storage[Storage Variables]
+        Fallback[fallback()]
+    end
+
+    subgraph "EIP-1967 Storage Slots"
+        impl[IMPLEMENTATION_SLOT\n(0x360894...)]
+        admin[ADMIN_SLOT\n(0xb53127...)]
+        paused[PAUSED_SLOT\n(0x8b9e6f...)]
+    end
+    
+    subgraph "Logic Contracts"
+        V1[RailgunSmartWallet V1]
+        V2[RailgunSmartWallet V2]
+    end
+
+    Fallback --"DELEGATECALL"--> V1
+    Fallback -.-> paused
+    Fallback -.-> impl
+    impl -.-> V1
+    
+    note[Admin updates IMPLEMENTATION_SLOT to upgrade]
+    admin -.-> note
+    note -.-> V2
+```
+
+#### 4. Adapt Layer (Cross-Chain & Relay)
+
+How a Cross-Chain Message triggers a complex sequence of Unshield, Swap, and Re-shield operations.
+
+```mermaid
+sequenceDiagram
+    participant EVM as EVMAdapt (Sepolia)
+    participant Zeta as ZetachainAdapt
+    participant Relay as RelayAdapt
+    participant Wallet as RailgunSmartWallet
+
+    EVM->>Zeta: onCall(message, zrc20, amount)
+    Note over Zeta: Decode Operation
+    
+    alt SHIELD
+        Zeta->>Wallet: shield(requests)
+    else TRANSACT
+        Zeta->>Wallet: transact(txs)
+    else UNSHIELD_OUTSIDE_CHAIN
+        Zeta->>Relay: call(unshieldData)
+        Relay->>Wallet: transact(unshieldTxs)
+        Wallet-->>Relay: Tokens (Unshielded)
+        Relay->>Relay: multicall(swap/bridge)
+    end
+```
+
+#### 5. Governance & Staking System
+
+`Staking.sol` manages Voting Power using a Snapshot system to prevent double-voting and facilitate time-weighted governance.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Unstaked
+    
+    Unstaked --> Staked: stake(amount)
+    state Staked {
+        [*] --> Locked
+        Locked --> Unlocked: unlock(stakeID)
+        
+        state Locked {
+            TransferTokens
+            UpdateSnapshot
+            AddVotingPower
+        }
+        
+        state Unlocked {
+            Wait30Days
+            RemoveVotingPower
+        }
+    }
+    
+    Unlocked --> Claimed: claim(stakeID)
+    Staked --> Staked: delegate(to)
+    
+    note right of Staked
+        Snapshots taken on every 
+        Stake / Delegate / Unlock
+        stored in globalsSnapshots
+    end note
 ```
 
 ### Deploy Railgun on Zetachain
