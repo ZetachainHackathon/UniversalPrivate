@@ -91,6 +91,15 @@ graph TD
     ```
     This folder contains scripts to programmatically interact with the Shield, Unshield, and Transfer functions.
 
+## 📜 Smart Contracts
+
+For detailed deployment guides, architecture diagrams, and verified contract addresses, please refer to the [Contract Documentation](contract/README.md).
+
+It covers:
+*   **Deployment**: How to deploy to ZetaChain and and other EVM chains.
+*   **Architecture**: Detailed system design and interaction flows.
+*   **Verification**: Scripts to verify deployments.
+
 ## 📦 Universal Private SDK
 
 [![npm version](https://img.shields.io/npm/v/@st99005912/universal-private-sdk.svg?style=flat-square)](https://www.npmjs.com/package/@st99005912/universal-private-sdk)
