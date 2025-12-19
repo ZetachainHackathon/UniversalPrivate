@@ -334,6 +334,7 @@ Each deployment file contains:
 
 See [deployments/README.md](deployments/README.md) for more details.
 
+
 ### Important Addresses
 
 After deployment, use these addresses for interactions:
@@ -352,4 +353,9 @@ Example (from latest ZetaChain testnet deployment):
 ```
 
 Check `deployments/zetachain-testnet.json` for the complete list.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 

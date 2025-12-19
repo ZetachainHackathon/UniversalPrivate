@@ -2,7 +2,7 @@
   "name": "railgun-contracts",
   "version": "0.0.1",
   "description": "Railgun Contract",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "lint": "solhint 'contracts/**/*.sol'; prettier --check './**'; eslint .",
     "lint:fix": "npx prettier --write './**'; npx solhint --fix 'contracts/**/*.sol'",
