@@ -33,11 +33,11 @@ View the package on npm: [https://www.npmjs.com/package/@st99005912/universal-pr
 
 If you need to install the package offline or strictly control the version artifact, you can use the `.tgz` file directly.
 
-1. Download the release file: `st99005912-universal-private-sdk-0.0.1.tgz`
+1. Download the release file: `st99005912-universal-private-sdk-0.0.2.tgz`
 2. Run the installation command pointing to the file path:
 
 ```bash
-npm install ./st99005912-universal-private-sdk-0.0.1.tgz
+npm install ./st99005912-universal-private-sdk-0.0.2.tgz
 
 ```
 
