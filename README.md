@@ -28,7 +28,6 @@ graph TD
 
     subgraph "ZetaChain (Privacy Layer)"
         ZetaAdapt[Zetachain Adapt Contract]
-        %% Added quotes to the lines below to fix the error
         RelayAdapt["Relay Adapt (Execution Layer)"]
         RailgunWallet["Railgun Smart Wallet (0zk System)"]
         DeFi[DeFi Protocols]
@@ -94,46 +93,33 @@ graph TD
 
 ## 📦 Universal Private SDK
 
-We provide a powerful SDK for developers to build privacy-enabled applications. The SDK supports both Node.js and Web environments.
+[![npm version](https://img.shields.io/npm/v/@st99005912/universal-private-sdk.svg?style=flat-square)](https://www.npmjs.com/package/@st99005912/universal-private-sdk)
+[![Downloads](https://img.shields.io/npm/dm/@st99005912/universal-private-sdk.svg?style=flat-square)](https://www.npmjs.com/package/@st99005912/universal-private-sdk)
+
+A professional SDK for privacy-preserving interactions and blockchain integration, supporting both **Node.js** and **Web** environments.
 
 ### Installation
 
 ```bash
-npm install universal-private-sdk
-# OR
-pnpm add universal-private-sdk
-```
-*(Note: Replace `universal-private-sdk` with the actual package name if different)*
+# using npm
+npm install @st99005912/universal-private-sdk
 
-### Basic Usage
-
-**Shielding Funds (Cross-Chain Deposit)**
-```typescript
-import { Shield } from 'universal-private-sdk';
-
-// Initialize Shield
-const shield = new Shield(provider, config);
-
-// Shield funds from Sepolia to ZetaChain Railgun 0zk Address
-await shield.deposit({
-  token: 'USDC',
-  amount: '100',
-  to: 'source-chain-address',
-  target: '0zk...', // Your Railgun 0zk Address
-});
+# using pnpm
+pnpm add @st99005912/universal-private-sdk
 ```
 
-**Private Transfer**
-```typescript
-import { Transfer } from 'universal-private-sdk';
+*(See [npm page](https://www.npmjs.com/package/@st99005912/universal-private-sdk) for more options)*
 
-// Transfer encrypted assets between 0zk addresses
-await transfer.send({
-  token: 'USDC',
-  amount: '50',
-  to: '0zk-recipient-address',
-});
-```
+### SDK Usage
+
+For detailed installation instructions, API documentation, and code examples, please refer to the [SDK Documentation](frontend/packages/sdk/README.md).
+
+Quick summary of available functions:
+*   **Shield**: Deposit public funds into the privacy system.
+*   **Private Transfer**: Send funds anonymously between 0zk addresses.
+*   **Cross-Chain Transfer**: Move private funds across different blockchains.
+*   **Connect**: Managing wallet connection.
+
 
 ## 🔒 Advanced Privacy (Waku & Broadcaster)
 
@@ -143,8 +129,6 @@ For maximum privacy, we recommend using **Waku** and **Broadcasters**.
 *   **Waku**: A decentralized communication layer that hides your IP address by routing messages through a p2p network before reaching the Broadcaster.
 
 *See [Railgun Privacy System Docs](https://docs.railgun.org/wiki/learn/privacy-system/community-broadcasters) for configuration details.*
-
-> **Note**: The current Web Demo executes transactions directly for simplicity. Developers using the SDK can enable Broadcaster/Waku support in the configuration.
 
 ## 🌐 Supported Networks (Testnet)
 

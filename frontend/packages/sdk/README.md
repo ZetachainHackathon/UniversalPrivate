@@ -1,22 +1,53 @@
 # Universal Private SDK
 
-這是一個基於 Railgun 協議的隱私交易 SDK，支援 EVM 鏈與 Zetachain 之間的跨鏈隱私操作。
+[![npm version](https://img.shields.io/npm/v/@st99005912/universal-private-sdk.svg?style=flat-square)](https://www.npmjs.com/package/@st99005912/universal-private-sdk)
+[![License](https://img.shields.io/npm/l/@st99005912/universal-private-sdk.svg?style=flat-square)](https://www.npmjs.com/package/@st99005912/universal-private-sdk)
+[![Downloads](https://img.shields.io/npm/dm/@st99005912/universal-private-sdk.svg?style=flat-square)](https://www.npmjs.com/package/@st99005912/universal-private-sdk)
 
-## 📦 安裝
+A professional SDK for privacy-preserving interactions and blockchain integration.
+
+> **Note**: This package is available on the public npm registry and supports standard installation methods.
+
+## 📦 Installation
+
+### Option 1: Install from NPM Registry (Recommended)
+This is the standard way to install the package. It ensures you get the latest updates and dependency resolution.
 
 ```bash
-npm install @st99005912/universal-private-sdk ethers
-# 或
-pnpm add @st99005912/universal-private-sdk ethers
+# using npm
+npm install @st99005912/universal-private-sdk
+
+# using yarn
+yarn add @st99005912/universal-private-sdk
+
+# using pnpm
+pnpm add @st99005912/universal-private-sdk
+
 ```
 
-## 🚀 快速開始
+View the package on npm: [https://www.npmjs.com/package/@st99005912/universal-private-sdk](https://www.npmjs.com/package/@st99005912/universal-private-sdk)
 
-### 1. 初始化引擎 (Initialize Engine)
+---
 
-在使用任何功能之前，必須先初始化 SDK。
+### Option 2: Manual Installation via Tarball
 
-**Web 環境 (React/Next.js):**
+If you need to install the package offline or strictly control the version artifact, you can use the `.tgz` file directly.
+
+1. Download the release file: `st99005912-universal-private-sdk-0.0.1.tgz`
+2. Run the installation command pointing to the file path:
+
+```bash
+npm install ./st99005912-universal-private-sdk-0.0.1.tgz
+
+```
+
+## 🚀 Getting Started
+
+### 1. Initialize Engine
+
+You must initialize the SDK before using any features.
+
+**Web Environment (React/Next.js):**
 
 ```typescript
 import { initializeEngine, loadEngineProvider } from "@st99005912/universal-private-sdk";
@@ -30,25 +61,26 @@ const init = async () => {
     shouldDebug: true
   });
 
-  // 連接網路 (例如 Sepolia)
+  // Connect to a network (e.g., Sepolia)
   await loadEngineProvider({
     name: "Sepolia",
     rpcUrl: "https://rpc.ankr.com/eth_sepolia",
     chainId: 11155111
   });
 };
+
 ```
 
-### 2. 創建/載入錢包 (Wallet)
+### 2. Create/Load Wallet
 
 ```typescript
 import { createRailgunWallet, loadWalletByID } from "@st99005912/universal-private-sdk";
 
-// 創建新錢包
+// Create a new wallet
 const createWallet = async (mnemonic: string, password: string) => {
-  // 產生加密金鑰 (請妥善保存)
+  // Generate encryption key (store this safely)
   const encryptionKey = await pbkdf2(password, "salt", 100000); 
-  
+   
   const walletInfo = await createRailgunWallet(
     encryptionKey,
     mnemonic,
@@ -56,11 +88,12 @@ const createWallet = async (mnemonic: string, password: string) => {
   );
   return walletInfo.id;
 };
+
 ```
 
-### 3. 隱私存款 (Shield)
+### 3. Shield (Deposit to Privacy)
 
-將公開代幣 (ERC20) 轉入隱私餘額。
+Transfer public tokens (ERC20) into a private balance.
 
 ```typescript
 import { erc20PopulateShieldTransaction } from "@st99005912/universal-private-sdk";
@@ -70,18 +103,19 @@ const shield = async (walletId: string, tokenAddress: string, amount: bigint, si
     "Sepolia",
     walletId,
     [{ tokenAddress, amount, recipientAddress: "0zk..." }], // 0zk Address
-    true // 使用 Public Wallet 簽名
+    true // Sign with Public Wallet
   );
 
-  // 發送交易
+  // Send transaction
   const tx = await signer.sendTransaction(transaction);
   await tx.wait();
 };
+
 ```
 
-### 4. 隱私轉帳 (Private Transfer)
+### 4. Private Transfer
 
-在隱私池內進行轉帳 (0zk -> 0zk)。
+Transfer funds within the privacy pool (0zk -> 0zk).
 
 ```typescript
 import { executeTransfer } from "@st99005912/universal-private-sdk";
@@ -98,30 +132,41 @@ const transfer = async (walletId: string, recipient: string, amount: bigint, tok
   );
   console.log("Tx Hash:", tx.hash);
 };
+
 ```
 
-### 5. 跨鏈隱私轉帳 (Cross-Chain Transfer)
+### 5. Cross-Chain Private Transfer
 
-從一條鏈的隱私餘額轉帳到另一條鏈的公開地址。
+Transfer funds from a private balance on one chain to a public address on another chain.
 
 ```typescript
 import { executeCrossChainTransferFromEvm } from "@st99005912/universal-private-sdk";
 
 const crossChain = async () => {
   const tx = await executeCrossChainTransferFromEvm(
-    "Sepolia",           // 來源鏈
-    "0xZetachainAdapt..",// Zetachain Adapt 合約地址
+    "Sepolia",             // Source chain
+    "0xZetachainAdapt..",  // Zetachain Adapt contract address
     walletId,
     encryptionKey,
-    1000000n,            // 總金額 (含手續費)
-    997500n,             // 實際轉帳金額 (扣除 0.25% 手續費)
-    "0xToken...",        // Token 地址
-    "0xTargetZRC20...",  // 目標鏈 ZRC20 地址
-    "0xReceiver...",     // 接收者地址
+    1000000n,              // Total amount (including fees)
+    997500n,               // Actual transfer amount (deducting 0.25% fee)
+    "0xToken...",          // Token address
+    "0xTargetZRC20...",    // Target chain ZRC20 address
+    "0xReceiver...",       // Receiver address
     signer,
-    "0xEVMAdapt..."      // EVM Adapt 合約地址
+    "0xEVMAdapt..."        // EVM Adapt contract address
   );
-  
+   
   console.log("Cross-Chain Tx:", tx.hash);
 };
+
 ```
+
+## 🛠 Requirements
+
+* **Node.js**: >= 16.0.0
+* **npm**: >= 7.0.0
+
+## 📄 License
+
+This project is licensed under the MIT License.
