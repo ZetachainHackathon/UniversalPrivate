@@ -8,7 +8,7 @@ import { useRailgun } from "@/components/providers/railgun-provider";
 
 export default function LoginPage() {
   const { isConnected, address, connectWallet, signer } = useWallet();
-  const { login, create, scanProgress, scanStatus } = useRailgun(); // Use Context
+  const { login, create, scanProgress } = useRailgun(); // Use Context
   const router = useRouter();
 
   // Login State
@@ -139,7 +139,7 @@ export default function LoginPage() {
           {(scanProgress > 0 || isLoggingIn || isCreating) && (
             <div className="mb-6 p-4 bg-blue-50 text-blue-700 rounded-lg border-2 border-blue-200 text-center font-bold shadow-[4px_4px_0px_0px_rgba(191,219,254,1)]">
               <div className="mb-2">
-                {scanStatus || (scanProgress > 0 ? "正在同步區塊資料..." : (isLoggingIn ? "正在登入..." : "正在創建/匯入錢包..."))}
+                {scanProgress > 0 ? "正在同步區塊資料..." : (isLoggingIn ? "正在登入..." : "正在創建/匯入錢包...")}
               </div>
               <div className="w-full bg-blue-200 rounded-full h-2.5 dark:bg-blue-200 border border-blue-300">
                 <div
