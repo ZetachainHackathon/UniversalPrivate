@@ -83,7 +83,7 @@ graph TD
     > **Note**: The Web Demo creates a client-side wallet. You can generate a 0zk address using a mnemonic.
 
     For more details, please refer to the [Frontend README](frontend/README.md).
-    Or try it out on Web Demo Page: [Universal Web Demo Page](https://universal-private.vercel.app/)
+    Or try it out on Web Demo Page: [UniversalPrivate Web Demo Page](https://universal-private.vercel.app/)
 
 3.  **Run Node.js Tests/Backend**:
     ```bash
