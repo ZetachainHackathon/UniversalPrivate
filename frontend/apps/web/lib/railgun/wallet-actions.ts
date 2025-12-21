@@ -1,4 +1,4 @@
-import { Mnemonic, randomBytes } from "ethers";
+import { Mnemonic, randomBytes, keccak256, toUtf8Bytes } from "ethers";
 import {
   createRailgunWallet,
   loadWalletByID,
@@ -37,6 +37,18 @@ const getCreationBlockMap = () => {
  */
 export const createMnemonic = (): string => {
   return Mnemonic.fromEntropy(randomBytes(16)).phrase.trim();
+};
+
+/**
+ * 從簽名產生助記詞 (Deterministic)
+ * @param signature 錢包簽名
+ */
+export const createMnemonicFromSignature = (signature: string): string => {
+  // 將簽名 Hash 成 32 bytes 的 Entropy
+  const entropy = keccak256(toUtf8Bytes(signature));
+  // 取前 16 bytes (128 bits) 來產生 12 個字的助記詞
+  // Hex string: "0x" (2 chars) + 32 chars (16 bytes * 2 hex chars)
+  return Mnemonic.fromEntropy(entropy.slice(0, 34)).phrase.trim();
 };
 
 /**
