@@ -70,7 +70,7 @@ export default function LoginPage() {
       {/* Header Section */}
       <header className="w-full p-6 flex justify-between items-center bg-white border-b border-gray-200">
         <div className="text-2xl font-bold text-gray-800 border-2 border-black px-8 py-2 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white">
-          登入
+          登入頁面
         </div>
         <Button
           onClick={connectWallet}
