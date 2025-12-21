@@ -99,9 +99,58 @@ export default function WalletProvider({ children }: { children: ReactNode }) {
       // 切換後重新整理頁面以更新狀態
       // window.location.reload(); // 移除手動 reload，交給 chainChanged 事件處理
     } catch (error: any) {
-      // 錯誤代碼 4902 代表錢包裡還沒新增這條鏈 (通常 Sepolia 預設都有，這裡先簡化處理)
       console.error("切換網路失敗:", error);
-      alert("無法切換網路，請手動在 MetaMask 選擇 Sepolia");
+
+      // 嘗試處理 4902 錯誤 (未新增網路)
+      const errorCode = error?.code || error?.data?.code;
+      const errorMessage = error?.message || "";
+
+      if (
+        errorCode === 4902 ||
+        errorCode === "4902" ||
+        errorMessage.includes("Unrecognized chain ID") ||
+        errorMessage.includes("Try adding the chain")
+      ) {
+        // 尋找對應的鏈配置
+        const chainEntry = Object.entries(CONFIG.CHAINS).find(
+          ([_, val]) => val.ID_HEX.toLowerCase() === chainIdHex.toLowerCase()
+        );
+
+        if (chainEntry) {
+          const [chainKey, chainConfig] = chainEntry;
+          const config = chainConfig as any;
+
+          if (config.RPC_URL) {
+            try {
+              console.log(`嘗試自動新增網路: ${chainKey} (${config.ID_HEX})`);
+              await (window as any).ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: config.ID_HEX,
+                  chainName: chainKey.replace(/_/g, ' '), // 使用 Key 作為名稱，例如 BASE_SEPOLIA -> BASE SEPOLIA
+                  nativeCurrency: config.NATIVE_CURRENCY,
+                  rpcUrls: [config.RPC_URL],
+                  blockExplorerUrls: [config.EXPLORER_URL]
+                }],
+              });
+              
+              // 新增成功後再次嘗試切換
+              await (window as any).ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: chainIdHex }],
+              });
+              return; // 成功切換，結束
+            } catch (addError) {
+              console.error("自動新增網路失敗:", addError);
+              throw addError; // 拋出新增失敗的錯誤
+            }
+          } else {
+             console.warn(`無法自動新增網路 ${chainKey}: 缺少 RPC_URL 配置`);
+          }
+        }
+      }
+
+      throw error;
     }
   };
 

@@ -132,6 +132,8 @@ export const CONFIG = {
             ZRC20_GAS: "0x05BA149A7bd6dC1F937fA9046A9e05C05f3b18b0", // ETH.ETHSEP
             CHAIN_LOGO: "https://sepolia.dev/wp-content/uploads/elementor/thumbs/the-dolphin-po0q7ezlhqqzvrfmzw0atih2l0vqelut73w4eh5qtc.png",
             EXPLORER_URL: "https://sepolia.etherscan.io",
+            RPC_URL: "https://rpc.sepolia.org",
+            NATIVE_CURRENCY: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
         },
         ZETACHAIN: {
             ID_DEC: 7001,
@@ -139,6 +141,8 @@ export const CONFIG = {
             ZETACHAIN_ADAPT: "0x82b09E123d47618bbdCd08ECACB82fB6Da2118A1",
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zetachain/info/logo.png",
             EXPLORER_URL: "https://testnet.zetascan.com",
+            RPC_URL: "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+            NATIVE_CURRENCY: { name: "Zeta", symbol: "ZETA", decimals: 18 },
         },
         BASE_SEPOLIA: {
             ID_DEC: 84532,
@@ -147,6 +151,8 @@ export const CONFIG = {
             ZRC20_GAS: "0x236b0DE675cC8F46AE186897fCCeFe3370C9eDeD", // ETH.BASESEP
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png",
             EXPLORER_URL: "https://sepolia.basescan.org",
+            RPC_URL: "https://sepolia.base.org",
+            NATIVE_CURRENCY: { name: "Ether", symbol: "ETH", decimals: 18 },
         },
         ARBITRUM_SEPOLIA: {
             ID_DEC: 421614,
@@ -155,6 +161,8 @@ export const CONFIG = {
             ZRC20_GAS: "0x1de70f3e971B62A0707dA18100392af14f7fB677", // ETH.ARBSEP
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png",
             EXPLORER_URL: "https://sepolia.arbiscan.io",
+            RPC_URL: "https://sepolia-rollup.arbitrum.io/rpc",
+            NATIVE_CURRENCY: { name: "Ether", symbol: "ETH", decimals: 18 },
         },
         BSC_TESTNET: {
             ID_DEC: 97,
@@ -163,6 +171,8 @@ export const CONFIG = {
             ZRC20_GAS: "0xd97B1de3619ed2c6BEb3860147E30cA8A7dC9891", // BNB.BSC
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png",
             EXPLORER_URL: "https://testnet.bscscan.com",
+            RPC_URL: "https://data-seed-prebsc-1-s1.binance.org:8545",
+            NATIVE_CURRENCY: { name: "BNB", symbol: "tBNB", decimals: 18 },
         },
         KAIA_TESTNET: {
             ID_DEC: 1001,
@@ -171,6 +181,8 @@ export const CONFIG = {
             ZRC20_GAS: "0xe1A4f44b12eb72DC6da556Be9Ed1185141d7C23c", // KAIA.KAIROS
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png",
             EXPLORER_URL: "https://kaia-testnet.klaytnscope.com",
+            RPC_URL: "https://public-en-kairos.node.kaia.io",
+            NATIVE_CURRENCY: { name: "KAIA", symbol: "KAIA", decimals: 18 },
         },
         AVALANCHE_TEST: {
             ID_DEC: 43113,
@@ -179,6 +191,8 @@ export const CONFIG = {
             ZRC20_GAS: "0xEe9CC614D03e7Dbe994b514079f4914a605B4719", // AVAX.FUJI
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png",
             EXPLORER_URL: "https://testnet.snowtrace.io",
+            RPC_URL: "https://api.avax-test.network/ext/bc/C/rpc",
+            NATIVE_CURRENCY: { name: "Avalanche", symbol: "AVAX", decimals: 18 },
         },
         POLYGON_AMOY: {
             ID_DEC: 80002,
@@ -187,6 +201,8 @@ export const CONFIG = {
             ZRC20_GAS: "0x777915D031d1e8144c90D025C594b3b8Bf07a08d", // POL.AMOY
             CHAIN_LOGO: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png",
             EXPLORER_URL: "https://amoy.polygonscan.com",
+            RPC_URL: "https://rpc-amoy.polygon.technology",
+            NATIVE_CURRENCY: { name: "MATIC", symbol: "MATIC", decimals: 18 },
         }
     },
     FEES: {

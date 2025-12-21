@@ -87,12 +87,18 @@ export function CrossChainHeader() {
     const handleNetworkSwitch = async (chainKey: keyof typeof CONFIG.CHAINS) => {
         const chainConfig = CONFIG.CHAINS[chainKey];
         if (!chainConfig) return;
+
+        // 如果切換到的鏈不是當前 Railgun 配置的鏈，顯示提示
+        if (chainConfig.ID_DEC !== CONFIG.RAILGUN_NETWORK.CHAIN_ID) {
+            toast.info("此鏈尚未建立隱私錢包");
+        }
         
         try {
             await switchNetwork(chainConfig.ID_HEX);
             setShowNetworkMenu(false);
         } catch (error) {
             console.error("切換網路失敗:", error);
+            toast.error("切換網路失敗，請檢查錢包狀態");
         }
     };
 
