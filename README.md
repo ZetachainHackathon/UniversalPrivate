@@ -68,8 +68,8 @@ graph TD
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/your-username/universal-private.git
-    cd universal-private
+    git clone https://github.com/ZetachainHackathon/UniversalPrivate.git
+    cd UniversalPrivate
     ```
 
 2.  **Run the Web Demo**:
