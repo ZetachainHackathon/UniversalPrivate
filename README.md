@@ -80,7 +80,7 @@ graph TD
     ```
     Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-    > **Note**: The Web Demo creates a client-side wallet. You can generate a 0zk address using a mnemonic.
+    > **Note**: The Web Demo creates a client-side wallet. You can generate a 0zk address using a mnemonic, or alternatively, generate a new 0zk address by signing with your connected wallet (no mnemonic required).
 
     For more details, please refer to the [Frontend README](frontend/README.md).
     Or try it out on Web Demo Page: [UniversalPrivate Web Demo Page](https://universal-private.vercel.app/)
