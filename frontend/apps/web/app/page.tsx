@@ -51,10 +51,10 @@ export default function LandingPage() {
                         className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1]"
                     >
                         <span className="block bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-500">
-                            True Privacy for
+                            All Privacy
                         </span>
                         <span className="block text-white">
-                            Every Transaction
+                            One Chain
                         </span>
                     </motion.h1>
 
@@ -64,8 +64,7 @@ export default function LandingPage() {
                         transition={{ duration: 0.8, delay: 0.4 }}
                         className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed"
                     >
-                        Experience the future of decentralized finance with zero-knowledge technology.
-                        Anonymous, secure, and cross-chain compatible.
+                        Making privacy a fundamental right for every blockchain user
                     </motion.p>
 
                     <motion.div
