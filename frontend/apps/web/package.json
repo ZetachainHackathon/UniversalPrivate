@@ -21,6 +21,7 @@
     "bech32": "^2.0.0",
     "brotli-wasm": "^3.0.1",
     "ethers": "6.13.1",
+    "framer-motion": "^12.23.26",
     "level-js": "6.1.0",
     "lucide-react": "^0.469.0",
     "next": "^16.0.7",
