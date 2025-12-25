@@ -114,7 +114,7 @@ export default function LandingPage() {
 
             {/* Footer */}
             <footer className="relative z-10 border-t border-white/10 py-8 text-center text-gray-500 text-sm">
-                <p>&copy; 2025 UniversalPrivate. Powered by Railgun.</p>
+                <p>&copy; 2025 UniversalPrivate. Powered by Zetachain & Railgun.</p>
             </footer>
         </div>
     );
